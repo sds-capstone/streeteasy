@@ -1,2 +1,5 @@
 # streeteasy
-StreeEasy
+StreetEasy
+
+## Names:
+- Yanwan Zhu
