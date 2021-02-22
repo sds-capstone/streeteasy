@@ -1,6 +1,6 @@
 # streeteasy
-StreeEasy
+StreetEasy
 
-
-## Names: 
+## Names:
+- Yanwan Zhu
 - Elaine Ye 
