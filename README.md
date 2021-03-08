@@ -3,5 +3,5 @@ StreeEasy
 
 ## Names
 
-Dayana Meza 
+- Dayana Meza 
 
