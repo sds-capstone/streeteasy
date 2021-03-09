@@ -38,11 +38,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
-.DS_Store
-=======
 .Rproj.user
+
+# Mac store file
+.DS_Store
 
 # StreetEasy data
 *.csv
-
-yanwan_EDA.Rmd
