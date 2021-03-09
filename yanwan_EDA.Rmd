@@ -1,0 +1,59 @@
+---
+title: "EDA"
+author: "Yanwan Zhu"
+date: "3/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(caret)
+library(viridis)
+library(readr)
+library(MLmetrics)
+# library(tidymodels)
+```
+
+```{r}
+path <- "/Users/zhuyanwan/Document/Smith/Spring 2021/SDS 410/capstone_data/sale_listings.csv"
+listing <- read_csv(path)
+# glimpse(listing)
+```
+
+https://www.linkedin.com/learning/r-essential-training-part-2-modeling-data/classifying-cases-with-decision-tree-analysis
+
+```{r}
+# All non-text variables
+# ?? zip, what is census tract, census block?, area name??
+fac_names <- c("addr_hood", "addr_city", "addr_state","is_historic", "area_name")
+listing[,fac_names] <- lapply(listing[,fac_names], factor)
+```
+
+```{r}
+# Test and training, data wrangling
+set.seed(410)
+train <- listing %>% sample_frac(.70)
+test <- listing %>% anti_join(train)
+train_log10 <- train %>%
+  mutate(log10_price = log10(price),
+         log10_size_sqft = log10(size_sqft))
+test_log10 <- test %>%
+  mutate(log10_size_sqft = log10(size_sqft))
+```
+
+```{r}
+model_1_formula <- as.formula("log10_price ~ 1")
+model_1 <- lm(model_1_formula, data=train_log10)
+predicted_points_1 <- model_1 %>%
+  broom::augment(newdata = test_log10)
+
+test_log10 <- test_log10 %>% 
+      mutate(
+        log10_price_hat = predicted_points_1$.fitted,
+        price_hat = 10^log10_price_hat)
+
+# Compute RMSLE
+rmsle_hat_1 <- RMSLE(test_log10$price_hat, test_log10$price)
+```
+
