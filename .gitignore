@@ -10,7 +10,6 @@
 
 # Example code in package build process
 *-Ex.R
-yanwan_EDA.Rmd
 
 # Output files from R CMD build
 /*.tar.gz
