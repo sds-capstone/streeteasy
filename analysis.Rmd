@@ -18,6 +18,8 @@ library(tidytext)
 library(tm)
 library(dplyr)
 library(stringr)
+library(rpart.plot)
+library(SnowballC)
 data(stop_words)
 
 # Load the data 
@@ -36,25 +38,52 @@ sale <- read.csv("sale_listings.csv", stringsAsFactors = FALSE)
 
 -------------------------------------------------------
 
+<!-- Load Data -->
+
 ```{r}
-# Merge Datasets 
-data <- sale %>% #merge(sale,amenities,by="property_id") %>% 
+# Datasets 
+data <- sale %>% 
+  
+#Uncomment to merge amenities and sale 
+  #merge(sale,amenities,by="property_id") %>% 
   
   # select only descriptions for now
-  select(listing_description) %>% 
-  
-  # line numbers
-  mutate(linenumber = row_number()) 
+  select(listing_description) 
   
 ```
 
+<!-- Clean Data -->
+  <!-- reference: https://smltar.com/stemming.html --> 
+
 ```{r}
+# Cleaning the Data: Removing Stop Words and Stemming
 data <- data %>%
   unnest_tokens(word, listing_description) %>% 
-  anti_join(stop_words)
+  
+  # Remove Stop Words (e.g., "the")
+  anti_join(stop_words) %>% 
+  count(word, sort = TRUE) %>% 
+  
+  # Stemming 
+  mutate(stem = wordStem(word)) %>%
+  count(stem, sort = TRUE)
 ```
 
+<!-- Create Visualization of Frequency of Words --> 
+
 ```{r}
-data <- data %>%
-  count(word, sort = TRUE)
+# Get top 5 frequent words
+data_freq <- data %>%
+  filter(row_number() <= 5)
+
+# Build Viusalization
+  # Arrange and make it blue!
+ggplot(data = data_freq, aes(x = stem, y = n)) +
+  geom_col() 
+```
+
+<!-- Build a Classification Model --> 
+
+```{r}
+# 
 ```
