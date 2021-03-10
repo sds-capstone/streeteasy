@@ -26,7 +26,8 @@ sale_listings_clean <- sale_listings %>%
 
 #create log price var 
 sale_listings_clean <- sale_listings_clean %>%
-  mutate(log_price = log(price))
+  mutate(log10_price = log10(price))
+
 ```
 
 
@@ -151,7 +152,7 @@ Mean price = 1527538. NJ has 8877 listings, raw mean price is 666404.3; NY has 5
 ```{r message=FALSE, warning=FALSE}
 #correlation plot 
 sale_cor <- sale_listings_clean %>%
-  dplyr::select(bedrooms, bathrooms, anyrooms, size_sqft, time_to_subway, floor_count, year_built, log_price)
+  dplyr::select(bedrooms, bathrooms, anyrooms, size_sqft, time_to_subway, floor_count, year_built, log10_price)
 
 sale_cor %>%
   GGally::ggpairs()
