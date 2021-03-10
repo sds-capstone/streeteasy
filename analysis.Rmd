@@ -4,7 +4,7 @@ subtitle: "StreetEasy"
 author: "Dayana Meza"
 date: "Thursday, March 4th, 2021"
 output:
-  pdf_document
+  html_document
 ---
 
 ```{r, include=FALSE}
@@ -18,6 +18,14 @@ library(tidytext)
 library(tm)
 library(dplyr)
 library(stringr)
+library(rpart.plot)
+library(SnowballC)
+library(tidymodels)
+library(slider)
+library(future)
+library(widyr)
+require(furrr)
+
 data(stop_words)
 
 # Load the data 
@@ -36,25 +44,115 @@ sale <- read.csv("sale_listings.csv", stringsAsFactors = FALSE)
 
 -------------------------------------------------------
 
+<!-- Load Data -->
+
 ```{r}
-# Merge Datasets 
-data <- sale %>% #merge(sale,amenities,by="property_id") %>% 
+# Datasets 
+data <- sale %>% 
+  
+#Uncomment to merge amenities and sale 
+  #merge(sale,amenities,by="property_id") %>% 
   
   # select only descriptions for now
-  select(listing_description) %>% 
-  
-  # line numbers
-  mutate(linenumber = row_number()) 
+  select(listing_description,price,property_id) 
   
 ```
 
+<!-- Clean Data -->
+  <!-- In this section, we will focus on removing stop words, stemming, and word embedding -->
+  <!-- reference: https://smltar.com/stemming.html --> 
+
 ```{r}
+# Cleaning the Data: Removing Stop Words, Stemming
 data <- data %>%
   unnest_tokens(word, listing_description) %>% 
-  anti_join(stop_words)
+  
+  # Remove Stop Words (e.g., "the")
+  anti_join(stop_words) %>% 
+  
+  # Stemming 
+  mutate(stem = wordStem(word)) %>% 
+  
+      # add word count for each stem 
+  add_count(stem) %>% 
+  
+  # Word Embeddings
+      #First, let’s filter out words that are used only rarely in this dataset 
+
+  filter(n >= 50) %>%
+  select(-n) 
 ```
 
 ```{r}
-data <- data %>%
-  count(word, sort = TRUE)
+# Word Embedding 
+     # Create a nested dataframe, with one row per word description <!--https://smltar.com/embeddings.html#understand-word-embeddings-by-finding-them-yourself-->
+
+nested_words <- data %>%
+  nest(words = c(word))
 ```
+
+```{r}
+# Word Embedding 
+slide_windows <- function(tbl, window_size) {
+  skipgrams <- slider::slide(
+    tbl,
+    ~.x,
+    .after = window_size - 1,
+    .step = 1,
+    .complete = TRUE
+  )
+
+  safe_mutate <- safely(mutate)
+
+  out <- map2(
+    skipgrams,
+    1:length(skipgrams),
+    ~ safe_mutate(.x, window_id = .y)
+  )
+
+  out %>%
+    transpose() %>%
+    pluck("result") %>%
+    compact() %>%
+    bind_rows()
+}
+```
+
+
+```{r}
+# Word Embedding 
+  # Takes a lot of processing power, still in the works. 
+
+plan(multiprocess) ## for parallel processing
+
+tidy_pmi <- nested_words %>%
+  mutate(words = future_map(words, slide_windows, 4,
+    .progress = TRUE
+  )) %>%
+  unnest(words) %>%
+  unite(window_id, property_id, window_id) %>%
+  pairwise_pmi(word, window_id)
+
+tidy_pmi
+```
+
+<!-- Create Visualization of Frequency of Words --> 
+<!--
+```{r}
+# Get top 5 frequent words
+data_freq <- data %>%
+  filter(row_number() <= 5)
+
+# Build Viusalization
+  # Arrange and make it blue!
+ggplot(data = data, aes(x = stem, y = n)) +
+  geom_col() 
+```
+
+<!-- Build a Classification Model --> 
+<!--
+```{r}
+# 
+```
+
+-->
