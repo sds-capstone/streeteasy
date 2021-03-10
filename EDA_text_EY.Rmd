@@ -101,17 +101,17 @@ summary(sale_listings_clean)
 ```
 
 ### Questions: 
-- 1. the maximum number is 99 for bedrooms, 66 for bathrooms, 3200 for anyrooms, 247 for building_count (n. of buildings). I tend to think the listing with 99 bedrooms is a data entry mistake since it only has 9 rooms in total? The two listings with 66 bathrooms also seem impossible since it does not have data on size_sqft. Also the maximum for size_sqft is 588527, which seems odd. 
+- the maximum number is 99 for bedrooms, 66 for bathrooms, 3200 for anyrooms, 247 for building_count (n. of buildings). I tend to think the listing with 99 bedrooms is a data entry mistake since it only has 9 rooms in total? The two listings with 66 bathrooms also seem impossible since it does not have data on size_sqft. Also the maximum for size_sqft is 588527, which seems odd. 
 
 A methodological question: how could we systematically identify data that seems odd and how do we know if that's a mistake in data entry or not 
 
-- 2. variables missing over 6000 obs: time_to_subway (10274 NA), census_block (12011 NA), building_count (11242 NA), residential_unit_count (10635 NA), total_unit_count (11878 NA), year_built (7839 NA)
+- variables missing over 6000 obs: time_to_subway (10274 NA), census_block (12011 NA), building_count (11242 NA), residential_unit_count (10635 NA), total_unit_count (11878 NA), year_built (7839 NA)
 
-- 3. the minimum price is 1, which doesn't make sense; it corresponds to two listings with the same addr_stree, longitude & latitude, but different size_sqft. There are 315 entries with year built = 0. 
+- the minimum price is 1, which doesn't make sense; it corresponds to two listings with the same addr_stree, longitude & latitude, but different size_sqft. There are 315 entries with year built = 0. 
 
-- 4. although anyrooms mean the total number of rooms, it is strange that sometimes anyrooms is smaller than/ equal to bedrooms
+- although anyrooms mean the total number of rooms, it is strange that sometimes anyrooms is smaller than/ equal to bedrooms
 
-- 5. In data dictionary, it says "One property can correspond to more than listing, if it has been listed more than once." Should we remove duplicates based on some criteria (if there is any)? 
+- In data dictionary, it says "One property can correspond to more than listing, if it has been listed more than once." Should we remove duplicates based on some criteria (if there is any)? 
 
 
 ## Data visualization 
@@ -128,10 +128,11 @@ mean_price_p <- sale_listings_clean %>%
 #log price - looks better 
 sale_listings_clean %>%
   ggplot(aes(x=price)) +
-  geom_histogram() +
+  geom_histogram(fill = "#0c4c8a") +
   scale_x_log10() +
-  geom_vline(xintercept = mean_price, size = 1, color = "blue") +
-  ggtitle("mean log price")
+  geom_vline(xintercept = mean_price, size = 1, color = "yellow") +
+  ggtitle("mean log price") + 
+  theme_minimal()
 
 mean_st <- sale_listings_clean %>%
   group_by(addr_state) %>%
@@ -181,7 +182,9 @@ uni_freq <- sale_tk_count %>%
   geom_bar(stat = "identity")
 
 uni_freq + theme(axis.text.x=element_text(angle=45, hjust=1))
+```
 
+```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 #split text into bigrams and remove stop words 
 #2 grams take forever to run 
 sale_bigram <- text %>%

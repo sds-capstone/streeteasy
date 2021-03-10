@@ -1,0 +1,81 @@
+---
+title: "regression_LL"
+output: html_document
+---
+
+```{r loading packages}
+library(dplyr)
+library(stringr)
+library(rpart)
+library(rattle)
+```
+
+```{r loading files and joinging dataframes}
+amenities <- read.csv("/Users/llow/Desktop/capstone_data/amenities.csv")
+listings <- read.csv("/Users/llow/Desktop/capstone_data/sale_listings.csv")
+joined <- full_join(amenities, listings, by = "property_id")
+```
+
+```{r cleaning data}
+joined$size_sqft[joined$size_sqft == 0] <- NA
+joined
+listings$size_sqft[listings$size_sqft == 0] <- NA
+listings
+```
+
+
+```{r comparing price to other variables to see if there is a correlation}
+pairs(~bedrooms + bathrooms + size_sqft + price, data = listings,
+   main="Simple Scatterplot Matrix",
+   upper.panel = NULL)
+```
+
+```{r creating and plotting linear regression}
+reg <- lm(price ~ bedrooms + bathrooms + size_sqft, data = listings)
+summary(reg)
+plot(reg)
+```
+
+
+1. shows that data may be better modeled by a parabola not a line
+2. distribution is not normal and has lots of data on the tails
+3. there is not equal variance between points
+4. there are three major outliers that are screwing up this particular model
+conclusion: this data should not be modeled linearly 
+
+```{r lets try adding more variables}
+reg_extra <- lm(price ~ bedrooms + bathrooms + size_sqft + year_built + floor_count + time_to_subway + half_baths, data = listings)
+summary(reg_extra)
+plot(reg_extra)
+```
+definitely shouldn't be modeled linearly...
+
+```{r}
+quad_reg <- lm(price ~ poly(bedrooms, 3) + poly(bathrooms, 2) + poly(floor_count, 2), data = listings)
+summary(quad_reg)
+plot(quad_reg)
+```
+
+```{r creating and plotting linear regression}
+reg_test <- lm(price ~ bedrooms + area_name, data = listings)
+summary(reg_test)
+plot(reg_test)
+```
+
+looks like linear and polynomial regression is not the way to go.  let's try decision tree analysis:
+
+```{r simple decision tree}
+train = c(sample(1:50,25),sample(51:100,25),sample(101:150,25))
+tree = rpart(price ~ bedrooms + bathrooms, data = listings, subset = train, method="class")
+
+fancyRpartPlot(tree)
+```
+
+```{r prediction analysis}
+listings.Predict = predict(tree, listings, type = "class")
+table(Prices = listings$price, Prediction = listings.Predict)
+```
+
+
+
+
