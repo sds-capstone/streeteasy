@@ -19,6 +19,7 @@
 
 # RStudio files
 .Rproj.user/
+*.Rproj
 
 # produced vignettes
 vignettes/*.html
@@ -38,5 +39,9 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# proproetary data
-capstone_data/
+# Mac store file
+.DS_Store
+
+# StreetEasy data
+*.csv
+
