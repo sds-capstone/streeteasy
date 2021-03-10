@@ -1,0 +1,60 @@
+---
+title: "SDS 410"
+subtitle: "StreetEasy"
+author: "Dayana Meza"
+date: "Thursday, March 4th, 2021"
+output:
+  pdf_document
+---
+
+```{r, include=FALSE}
+# Load all packages here
+library(ggplot2)
+library(lubridate)
+library(ical)
+library(readr)
+library(knitr)
+library(tidytext)
+library(tm)
+library(dplyr)
+library(stringr)
+data(stop_words)
+
+# Load the data 
+amenities <- read.csv("amenities.csv", stringsAsFactors = FALSE)
+sale <- read.csv("sale_listings.csv", stringsAsFactors = FALSE)
+
+```
+
+# Main Question & Ojectives
+
+## Can we use listing descriptions to predict home prices? 
+
+- Can we convert the description text into meaningful features? 
+
+- Can we use text-based features in addition to the existing features to predict home prices? 
+
+-------------------------------------------------------
+
+```{r}
+# Merge Datasets 
+data <- sale %>% #merge(sale,amenities,by="property_id") %>% 
+  
+  # select only descriptions for now
+  select(listing_description) %>% 
+  
+  # line numbers
+  mutate(linenumber = row_number()) 
+  
+```
+
+```{r}
+data <- data %>%
+  unnest_tokens(word, listing_description) %>% 
+  anti_join(stop_words)
+```
+
+```{r}
+data <- data %>%
+  count(word, sort = TRUE)
+```
