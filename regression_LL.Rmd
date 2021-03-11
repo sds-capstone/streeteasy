@@ -9,6 +9,8 @@ library(stringr)
 library(rpart)
 library(rattle)
 library(ggplot2)
+library(tidymodels)
+library(rpart.plot)
 ```
 
 ```{r loading files and joinging dataframes}
@@ -26,8 +28,8 @@ listings
 
 
 ```{r comparing price to other variables to see if there is a correlation}
-pairs(~bedrooms + bathrooms + size_sqft + price, data = listings,
-   main="Simple Scatterplot Matrix",
+pairs_plot <- pairs(~bedrooms + bathrooms + size_sqft + price, data = listings,
+   main = "Simple Scatterplot Matrix",
    upper.panel = NULL)
 ```
 
@@ -67,76 +69,51 @@ looks like linear and polynomial regression is not the way to go.  let's try dec
 
 ```{r simple decision tree}
 train = c(sample(1:50, 25), sample(51:100, 25), sample(101:150, 25))
-tree = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway, data = listings, subset = train, method = "class")
-
+tree = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built, data = listings, subset = train, method = "class")
 fancyRpartPlot(tree)
 ```
 
 ```{r prediction analysis}
-listings.Predict = predict(tree, listings, type = "class")
-table(Prices = listings$price, Prediction = listings.Predict)
+tree_c = rpart(price ~ addr_city, data = listings, subset = train, method = "class")
+fancyRpartPlot(tree_c)
 ```
 
-```{r eda}
-avg_price <- mean(listings$price, na.rm = TRUE)
-avg_price
+```{r}
+plot(listings$addr_lat, listings$price)
+plot(listings$addr_lon, listings$price)
 
-avg_bed <- mean(listings$bedrooms, na.rm = TRUE)
-avg_bed
-
-avg_bath <- mean(listings$bathrooms, na.rm = TRUE)
-avg_bath
-
-avg_size <- mean(listings$size_sqft, na.rm = TRUE)
-avg_size
-
-avg_tts <- mean(listings$time_to_subway, na.rm = TRUE)
-avg_tts
-
-avg_halfb <- mean(listings$half_baths, na.rm = TRUE)
-avg_halfb
-
-avg_year <- mean(listings$year_built, na.rm = TRUE)
-avg_year
-
-common_city <- listings %>%
-  group_by(addr_city) %>%
-  count(addr_city, sort = TRUE) 
-common_city
-
-common_neigh <- listings %>%
-  group_by(area_name) %>%
-  count(area_name, sort = TRUE) 
-common_neigh
+ggplot(listings, aes(x = addr_lon, y = addr_lat)) + 
+  geom_point() + 
+  geom_text(label = rownames(listings))
 ```
 
-```{r distributions of numeric variables}
-price_plot <- ggplot(data = listings, aes(x = price)) + 
-  geom_histogram()
-price_plot
+seems like most houses are around 41 deg, -75 deg.  Are the lat, lon around 0 false entries? let's delete the ones that seem fishy and see what happens.
 
-bed_plot <- ggplot(data = listings, aes(x = bedrooms)) + 
-  geom_histogram()
-bed_plot
-
-bath_plot <- ggplot(data = listings, aes(x = bathrooms)) + 
-  geom_histogram()
-bath_plot
-
-size_plot <- ggplot(data = listings, aes(x = size_sqft)) + 
-  geom_histogram()
-size_plot
-
-tts_plot <- ggplot(data = listings, aes(x = time_to_subway)) + 
-  geom_histogram()
-tts_plot
-
-year_plot <- ggplot(data = listings, aes(x = year_built)) + 
-  geom_histogram()
-year_plot
-
+```{r}
+listings_adj <- listings %>%
+  filter(addr_lat > 35,
+         addr_lon < -70, 
+         addr_lon > -76)
 ```
 
+```{r}
+plot(listings_adj$addr_lat, listings_adj$price)
+plot(listings_adj$addr_lon, listings_adj$price)
+
+ggplot(listings_adj, aes(x = addr_lon, y = addr_lat)) + 
+  geom_point() 
+```
+
+
+```{r}
+latlontree = rpart(price ~ addr_lat + addr_lon, data = listings_adj)
+fancyRpartPlot(latlontree)
+```
+
+```{r simple decision tree}
+tree = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built + addr_lat + addr_lon, data = listings_adj, subset = train, method = "class")
+fancyRpartPlot(tree)
+```
 
 
 
