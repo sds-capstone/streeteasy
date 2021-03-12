@@ -1,0 +1,210 @@
+---
+title: "EDA_text_EY"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(tidytext)
+library(janitor)
+library(SnowballC)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+sale_listings <- read_csv("capstone_data/sale_listings.csv") 
+amenities <- read_csv("capstone_data/amenities.csv")
+```
+
+## Data Cleaning 
+```{r}
+#make state names consistent 
+sale_listings_clean <- sale_listings %>%
+  mutate(addr_state = ifelse(addr_state == "New Jersey", "NJ", ifelse(addr_state == "New York", "NY", addr_state)))
+
+#create log price var 
+sale_listings_clean <- sale_listings_clean %>%
+  mutate(log10_price = log10(price))
+
+```
+
+
+```{r message=FALSE, warning=FALSE, paged.print=TRUE}
+#make the spelling of cities consistent 
+sale_listings_clean <- sale_listings_clean %>%
+  mutate(addr_city = tolower(addr_city)) %>%
+  mutate(addr_city = recode(addr_city,
+                            "apt.7" = "west new york",
+                            "1214 - north brunswick" = "north bergen",
+                            "77 hudson - jersey city" = "jersey city",
+                            "arvene" = "arverne",
+                            "bayonne city" = "bayonne",
+                            "brook;yn" = "brooklyn",
+                            "brookyn" = "brooklyn",
+                            "e. elmhurst" = "east elmhurst",
+                            "jersey city bergen/ lafayette" = "jersey city bergen-lafayett",
+                            "jc, bergen-lafayett" = "jersey city bergen-lafayett",
+                            "jc, downtown" = "jersey city downtown",
+                            "jc, greenville" = "jersey city greenville",
+                            "jc, journal square" = "jersey city jsq",
+                            "journal square" = "jersey city jsq",
+                            "kearney" = "kearny",
+                            "neponsit ny" = "neponsit",
+                            "queen" = "queens",
+                            "queens village n" = "queens village",
+                            "richmond hill s." = "richmond hill",
+                            "west ny" = "west new york",
+                            "springfield gdns" = "springfield gardens",
+                            "s. ozone park" = "south ozone park"))
+
+sale_listings_clean %>%
+  group_by(addr_city) %>%
+  summarize(mean = mean(price), n=n()) 
+
+amenities %>%
+  group_by(name) %>%
+  summarize(n=n())
+
+```
+- there are 211 unique zip codes - do we want to use the addr_zip as a predictor? It seems like on the website of Zillows group, zip codes are included to provide estimated price 
+
+- If we want to use addr_city as a predictor, we need to decide on what level of municipalities we want to use. Right now there are 113 unique addr_city after cleaning. Some listed "cities" are actually neighborhoods in the county and only has one listing. How do we want to deal with that? 
+
+## Exploratory Data Analysis 
+```{r}
+#the unique property id of amenities and sale_listings do not match
+length(unique(amenities$property_id))
+length(unique(sale_listings$property_id))
+
+summary(sale_listings_clean)
+
+#examine listings with odd numbers 
+
+#sale_listings_clean %>%
+#  filter(bedrooms == 99)
+
+#sale_listings_clean %>%
+#  arrange(desc(bedrooms))
+
+#sale_listings_clean %>%
+#  arrange(desc(bathrooms))
+
+#sale_listings_clean %>%
+#  filter(price == 1)
+
+#sale_listings_clean %>%
+#  filter(size_sqft == 588527)
+
+#sale_listings_clean %>%
+#  filter(year_built == 0)
+```
+
+### Questions: 
+- the maximum number is 99 for bedrooms, 66 for bathrooms, 3200 for anyrooms, 247 for building_count (n. of buildings). I tend to think the listing with 99 bedrooms is a data entry mistake since it only has 9 rooms in total? The two listings with 66 bathrooms also seem impossible since it does not have data on size_sqft. Also the maximum for size_sqft is 588527, which seems odd. 
+
+A methodological question: how could we systematically identify data that seems odd and how do we know if that's a mistake in data entry or not 
+
+- variables missing over 6000 obs: time_to_subway (10274 NA), census_block (12011 NA), building_count (11242 NA), residential_unit_count (10635 NA), total_unit_count (11878 NA), year_built (7839 NA)
+
+- the minimum price is 1, which doesn't make sense; it corresponds to two listings with the same addr_stree, longitude & latitude, but different size_sqft. There are 315 entries with year built = 0. 
+
+- although anyrooms mean the total number of rooms, it is strange that sometimes anyrooms is smaller than/ equal to bedrooms
+
+- In data dictionary, it says "One property can correspond to more than listing, if it has been listed more than once." Should we remove duplicates based on some criteria (if there is any)? 
+
+
+## Data visualization 
+
+```{r message=FALSE, warning=FALSE}
+
+#histogram of price: extremely skewed 
+mean_price <- mean(sale_listings_clean$price)
+mean_price_p <- sale_listings_clean %>%
+  ggplot(aes(x=price)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean_price, size = 1, color = "blue")
+
+#log price - looks better 
+sale_listings_clean %>%
+  ggplot(aes(x=price)) +
+  geom_histogram(fill = "#0c4c8a") +
+  scale_x_log10() +
+  geom_vline(xintercept = mean_price, size = 1, color = "yellow") +
+  ggtitle("mean log price") + 
+  theme_minimal()
+
+mean_st <- sale_listings_clean %>%
+  group_by(addr_state) %>%
+  summarize(n = n(), mean = mean(price))
+
+#compare log distribution and mean price between NJ and NY
+ggplot(data=sale_listings_clean, aes(x=price, fill=addr_state)) +
+  geom_density(adjust=1.5, alpha=.4) +
+  geom_vline(data = mean_st, aes(xintercept = mean, color = addr_state), linetype="dashed") +
+  scale_x_log10() +
+  ggtitle("mean log price by state")
+```
+
+Mean price = 1527538. NJ has 8877 listings, raw mean price is 666404.3; NY has 50784 listings, mean price is 1678063.1.  
+
+```{r message=FALSE, warning=FALSE}
+#correlation plot 
+sale_cor <- sale_listings_clean %>%
+  dplyr::select(bedrooms, bathrooms, anyrooms, size_sqft, time_to_subway, floor_count, year_built, log10_price)
+
+sale_cor %>%
+  GGally::ggpairs()
+```
+
+- many variables are extremely skewed: how do we deal with that 
+
+## tokenization, bigrams, and word counts
+```{r fig.height=4, fig.width=6}
+#only select property_id and descriptions 
+sale_text <- sale_listings %>%
+  select(property_id, listing_description)
+
+text <- tibble(txt = sale_text$listing_description)
+
+#split text into single words and remove stop words 
+sale_text_tk <- text %>%
+  unnest_tokens(word, txt) %>%
+  anti_join(stop_words) 
+
+sale_tk_count <- sale_text_tk %>%
+   count(word, sort = TRUE) %>%
+  arrange(desc(n))
+
+uni_freq <- sale_tk_count %>%
+  head(50) %>%
+  ggplot(aes(y=reorder(word,n), x = n)) + 
+  geom_bar(stat = "identity")
+
+uni_freq + theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+#split text into bigrams and remove stop words 
+#2 grams take forever to run 
+sale_bigram <- text %>%
+  unnest_tokens(bigram, txt, token = 'ngrams', n=2) %>% 
+  separate(bigram, c('word1', 'word2'), sep = " ") %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  unite(bigram, word1, word2, sep = " ") 
+
+sale_bi_count <- sale_bigram %>%
+  count(bigram, sort = TRUE) %>%
+  arrange(desc(n))
+
+
+bi_freq <- sale_bi_count %>%
+  head(50) %>%
+  ggplot(aes(y=reorder(bigram,n), x = n)) + 
+  geom_bar(stat = "identity")
+bi_freq
+```
+
+
