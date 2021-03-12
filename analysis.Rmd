@@ -147,7 +147,6 @@ cos_sim_rom = sim2(x = data_word_vectors, y = cozy, method = "cosine", norm = "l
   # We get 'views' 0.9378300 association 
 ```
 
-
 <!-- Create Visualization of Frequency of Words --> 
 
 ```{r}
@@ -167,6 +166,7 @@ cos_sim_rom = sim2(x = data_word_vectors, y = cozy, method = "cosine", norm = "l
 # 
 ```
 -->
+
 
 
 

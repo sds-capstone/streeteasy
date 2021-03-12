@@ -1,5 +1,5 @@
 # streeteasy
-StreeEasy
+StreetEasy
 
 ## Names
 
