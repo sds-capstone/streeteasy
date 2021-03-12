@@ -25,6 +25,7 @@ library(slider)
 library(future)
 library(widyr)
 require(furrr)
+library(text2vec)
 
 data(stop_words)
 
@@ -59,7 +60,7 @@ data <- sale %>%
 ```
 
 <!-- Clean Data -->
-  <!-- In this section, we will focus on removing stop words, stemming, and word embedding -->
+  <!-- In this section, we will focus on tokenization, removing stop words, stemming -->
   <!-- reference: https://smltar.com/stemming.html --> 
 
 ```{r}
@@ -76,77 +77,88 @@ data <- data %>%
       # add word count for each stem 
   add_count(stem) %>% 
   
-  # Word Embeddings
-      #First, let’s filter out words that are used only rarely in this dataset 
+    # Comment out because it interferes with word embedding
+  #group_by(word) %>% 
+  #mutate(count = n()) %>% 
+  #arrange(desc(count)) %>% 
+  
+      #then, let’s filter out words that are used only rarely in this dataset 
 
   filter(n >= 50) %>%
-  select(-n) 
+  select(-n)
 ```
 
-```{r}
-# Word Embedding 
-     # Create a nested dataframe, with one row per word description <!--https://smltar.com/embeddings.html#understand-word-embeddings-by-finding-them-yourself-->
-
-nested_words <- data %>%
-  nest(words = c(word))
-```
-
-```{r}
-# Word Embedding 
-slide_windows <- function(tbl, window_size) {
-  skipgrams <- slider::slide(
-    tbl,
-    ~.x,
-    .after = window_size - 1,
-    .step = 1,
-    .complete = TRUE
-  )
-
-  safe_mutate <- safely(mutate)
-
-  out <- map2(
-    skipgrams,
-    1:length(skipgrams),
-    ~ safe_mutate(.x, window_id = .y)
-  )
-
-  out %>%
-    transpose() %>%
-    pluck("result") %>%
-    compact() %>%
-    bind_rows()
-}
-```
-
-
-```{r}
-# Word Embedding 
-  # Takes a lot of processing power, still in the works. 
-
-plan(multiprocess) ## for parallel processing
-
-tidy_pmi <- nested_words %>%
-  mutate(words = future_map(words, slide_windows, 4,
-    .progress = TRUE
-  )) %>%
-  unnest(words) %>%
-  unite(window_id, property_id, window_id) %>%
-  pairwise_pmi(word, window_id)
-
-tidy_pmi
-```
-
-<!-- Create Visualization of Frequency of Words --> 
 <!--
 ```{r}
+nested_words<- data %>%
+  nest(words = c(word)) 
+```
+
+```{r}
+top_fifty <- data %>%
+  group_by(word)
+  filter(rank(desc(word))<=50)
+```
+-->
+
+```{r}
+freq <- data %>% 
+    group_by(word,price) %>% 
+  mutate(count = n()) %>% 
+  arrange(desc(count)) 
+```
+
+  <!-- In this section, we will focus on word embeddings -->
+  <!-- reference: https://m-clark.github.io/text-analysis-with-R/word-embeddings.html -->
+  
+```{r}
+# Create vocabulary object - word counts
+data_words_ls = list(data$word)
+it = itoken(data_words_ls, progressbar = FALSE)
+data_vocab = create_vocabulary(it)
+data_vocab = prune_vocabulary(data_vocab, term_count_min = 5)
+```
+
+```{r}
+# The next step is to create the token co-occurrence matrix (TCM). The definition of whether two words occur together is arbitrary. Should we just look at previous and next word? Five behind and forward? This will definitely affect results so you will want to play around with it.
+
+# maps words to indices
+vectorizer = vocab_vectorizer(data_vocab)
+
+# use window of 10 for context words
+data_tcm = create_tcm(it, vectorizer, skip_grams_window = 10)
+
+# Note that such a matrix will be extremely sparse. Most words do not go with other words in the grand scheme of things. So when they do, it usually matters.
+```
+
+```{r}
+glove = GlobalVectors$new(rank = 10,x_max = 50, learning_rate = 0.1)
+data_wv_main = glove$fit_transform(data_tcm, n_iter = 10, convergence_tol = 0.001)
+data_wv_context = glove$components
+data_word_vectors = data_wv_main + t(data_wv_context)
+```
+
+```{r}
+# Word associations -- "Spectacular" as an example [this is the word with the highest price]
+  # What is the clost word to Spectacular?
+cozy = data_word_vectors["spectacular", , drop = F]
+cos_sim_rom = sim2(x = data_word_vectors, y = cozy, method = "cosine", norm = "l2")
+  
+  # We get 'views' 0.9378300 association 
+```
+
+
+<!-- Create Visualization of Frequency of Words --> 
+
+```{r}
 # Get top 5 frequent words
-data_freq <- data %>%
-  filter(row_number() <= 5)
+#data_freq <- data %>%
+#  filter(row_number() <= 5)
 
 # Build Viusalization
   # Arrange and make it blue!
-ggplot(data = data, aes(x = stem, y = n)) +
-  geom_col() 
+#ggplot(data = data, aes(x = stem, y = n)) +
+#  geom_col() 
 ```
 
 <!-- Build a Classification Model --> 
@@ -154,5 +166,9 @@ ggplot(data = data, aes(x = stem, y = n)) +
 ```{r}
 # 
 ```
-
 -->
+
+
+
+
+
