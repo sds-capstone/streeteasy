@@ -23,94 +23,104 @@ test <- sale_listings %>% anti_join(train)
 I haven't completely cleaned up the data yet; results might be different after the data is cleaned. 
 
 ```{r}
-#summary(sale_listings)
+# summary(sale_listings)
 train <- sale_listings %>%
   mutate(addr_state = ifelse(addr_state == "New Jersey", "NJ", ifelse(addr_state == "New York", "NY", addr_state)))
-#log 10 price 
+# log 10 price
 train <- sale_listings %>%
   mutate(logPrice = log10(price))
 
 # is it legit to use medians to fill in when the rate of missing data is very large? (i.e., over10k)
+# I thought this is what Yipeng said to do, so I don't see why not?! -Emma
 ```
 
-It suddenly came to me that we could probably use LASSO if we eventually populate many vars 
+It suddenly came to me that we could probably use LASSO if we eventually populate many vars     Aha! I remember LASSO. Good call. -Emma
 
 ```{r}
-#select best subset from not-carefully-chosen vars 
-#I vaguely remember there should be some difference between backforward vs forward vs stepwise selection but can't recall the details 
-#be cautious that some vars I throw in here have a lot of missing values/ skewed values 
+# select best subset from not-carefully-chosen vars
+# I vaguely remember there should be some difference between backforward vs forward vs stepwise selection but can't recall the details
+# be cautious that some vars I throw in here have a lot of missing values/ skewed values
 
-#!!!bad practice: using na.omit so that best subsets can be identified -- again will revisit this after data is cleaned 
-#filter out size_sqft = 0 
+# !!!bad practice: using na.omit so that best subsets can be identified -- again will revisit this after data is cleaned
+# filter out size_sqft = 0
 train_complt <- train %>%
-  select(bedrooms, addr_state, price, bathrooms, anyrooms, size_sqft, time_to_subway, floor_count, year_built,logPrice, is_historic) %>%
+  select(bedrooms, addr_state, price, bathrooms, anyrooms, size_sqft, time_to_subway, floor_count, year_built, logPrice, is_historic) %>%
   na.omit() %>%
-  filter(size_sqft!=0)
+  filter(size_sqft != 0)
 
 train_complt <- train_complt %>%
   mutate(logSize_sqft = log10(size_sqft)) %>%
   mutate(is_historic = as.factor(is_historic))
 
-#note: I used stepwise here; results are different if use backward/forward selection 
-model.seq <- regsubsets(logPrice ~ bedrooms + bathrooms + anyrooms
-                         + logSize_sqft + time_to_subway + floor_count + year_built + addr_state, 
-                         data = train_complt, 
-                         nvmax = 5, 
-                         method = "seqrep")
-#select logSize_sqft, bedrooms, bathrooms, time_to_subway, floor_count 
+# note: I used stepwise here; results are different if use backward/forward selection
+model.seq <- regsubsets(logPrice ~ bedrooms + 
+                          bathrooms + 
+                          anyrooms + 
+                          logSize_sqft + 
+                          time_to_subway + 
+                          floor_count + 
+                          year_built + 
+                          addr_state,
+                        data = train_complt,
+                        nvmax = 5,
+                        method = "seqrep"
+)
+# select logSize_sqft, bedrooms, bathrooms, time_to_subway, floor_count
 
 with(summary(model.seq), data.frame(rsq, adjr2, rss, cp, outmat))
 
 
-mod1 <- lm(logPrice ~ bedrooms + bathrooms + 
-                           logSize_sqft+
-                           addr_state + floor_count, 
-                         data = train_complt)
-#because the vars are soooo skewed, the coefficients look very wired 
+mod1 <- lm(logPrice ~ bedrooms + bathrooms +
+             logSize_sqft +
+             addr_state + floor_count,
+           data = train_complt
+)
+# because the vars are soooo skewed, the coefficients look very wired
 summary(mod1)
 ```
 
 ```{r}
-#stole code from Albert's class 
-# 5-fold cross-validation 
-train_complt <- train_complt %>% 
-  sample_frac(1) %>% 
-  mutate(fold = rep(1:5, length = n())) %>% 
+# stole code from Albert's class
+# 5-fold cross-validation
+train_complt <- train_complt %>%
+  sample_frac(1) %>%
+  mutate(fold = rep(1:5, length = n())) %>%
   arrange(fold)
-  RMLSE <- rep(0, 5)
-for(j in 1:5){
-  pretend_training <- train_complt %>% 
+RMLSE <- rep(0, 5)
+for (j in 1:5) {
+  pretend_training <- train_complt %>%
     filter(fold != j)
-  pretend_test <- train_complt %>% 
+  pretend_test <- train_complt %>%
     filter(fold == j)
-  #Fit model on pretend training
-mod1 <- lm(logPrice ~ bedrooms + bathrooms + 
-                           logSize_sqft+
-                           addr_state + floor_count, 
-                         data = train_complt)
-#Making prediction using broom()
-Model_prediction <- mod1 %>%
-  broom::augment(newdata=pretend_test) %>%
-  mutate(.fitted = 10^.fitted)
-pretend_test<-pretend_test%>%
-  mutate(price_hat = Model_prediction$.fitted)
-RMLSE[j] <- pretend_test %>% 
-      mutate(
-        residual = log(price + 1) - log(price_hat + 1),
-        residual_sq = residual^2
-      ) %>% 
-      summarize(
-        MLSE = mean(residual_sq),
-        RMLSE = sqrt(MLSE)
-      ) %>% 
-      pull(RMLSE)
+  # Fit model on pretend training
+  mod1 <- lm(logPrice ~ bedrooms + bathrooms +
+               logSize_sqft +
+               addr_state + floor_count,
+  data = train_complt
+  )
+  # Making prediction using broom()
+  Model_prediction <- mod1 %>%
+    broom::augment(newdata = pretend_test) %>%
+    mutate(.fitted = 10^.fitted)
+  pretend_test <- pretend_test %>%
+    mutate(price_hat = Model_prediction$.fitted)
+  RMLSE[j] <- pretend_test %>%
+    mutate(
+      residual = log(price + 1) - log(price_hat + 1),
+      residual_sq = residual^2
+    ) %>%
+    summarize(
+      MLSE = mean(residual_sq),
+      RMLSE = sqrt(MLSE)
+    ) %>%
+    pull(RMLSE)
 }
-    rmlse <- mean(RMLSE)
-    rmlse
-    
-#rmlse = .569 
-#could fit the model back to test set; did not do so here 
-#could use function rmlse()
+rmlse <- mean(RMLSE)
+rmlse
+
+# rmlse = .569
+# could fit the model back to test set; did not do so here
+# could use function rmlse()
 ```
 
 
@@ -124,11 +134,3 @@ https://stackoverflow.com/questions/58129132/error-in-lm-fitx-y-offset-offset-si
 http://www.science.smith.edu/~jcrouser/SDS293/labs/lab8-r.html
 
 https://bookdown.org/tpinto_home/Regularisation/best-subset-selection.html#bss.intro
-
-
-
-
-
-
-
-
