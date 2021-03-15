@@ -12,7 +12,7 @@ library(leaps)
 
 ```{r message=FALSE, warning=FALSE}
 library(readr)
-sale_listings <- read_csv("capstone_data/sale_listings.csv")
+sale_listings <- read_csv(here::here("sale_listings.csv"))
 
 # Create test & training sets (used the same code to split as Yanwan did in null model)
 set.seed(410)
