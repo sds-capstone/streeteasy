@@ -1,0 +1,45 @@
+---
+title: "decision_tree_analysis"
+output: html_document
+---
+
+```{r loading packages}
+library(dplyr)
+library(rpart)
+library(rattle)
+library(ggplot2)
+library(tidymodels)
+library(rpart.plot)
+```
+
+```{r loading and cleaning}
+sale_listings <- read.csv("/Users/llow/Desktop/capstone/streeteasy_data/sale_listings.csv")
+sale_listings$size_sqft[sale_listings$size_sqft == 0] <- NA
+sale_listings
+```
+
+```{r narrowing location data}
+sale_listings_adj <- sale_listings %>%
+  filter(addr_lat > 35,
+         addr_lon < -70, 
+         addr_lon > -76)
+```
+
+```{r simple decision tree with location and other variables}
+train <- c(sample(1:50, 25), sample(51:100, 25), sample(101:150, 25))
+
+tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built + addr_lat + addr_lon, data = sale_listings_adj, subset = train, method = "class")
+fancyRpartPlot(tree_all)
+```
+
+```{r}
+price_prediction <- predict(tree_all, sale_listings, type = 'class')
+
+# comparing predictions to actual prices
+table <- table(Price = sale_listings$price, Prediction = price_prediction)
+
+# determining model accuracy
+accuracy_Test <- sum(diag(table)) / sum(table)
+print(paste('Accuracy for test', accuracy_Test))
+```
+

@@ -70,12 +70,12 @@ looks like linear and polynomial regression is not the way to go.  let's try dec
 ```{r simple decision tree}
 train <- c(sample(1:50, 25), sample(51:100, 25), sample(101:150, 25))
 tree_num <- rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built, data = listings, subset <- train, method = "class")
-fancyRpartPlot(tree)
+fancyRpartPlot(tree_num)
 ```
 
 ```{r prediction analysis}
 tree_cat <- rpart(price ~ addr_city, data = listings, subset = train, method = "class")
-fancyRpartPlot(tree_c)
+fancyRpartPlot(tree_cat)
 ```
 
 ```{r visualizing location data}
@@ -112,7 +112,7 @@ fancyRpartPlot(latlontree)
 
 ```{r simple decision tree with location and other variables}
 tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built + addr_lat + addr_lon, data = listings_adj, subset = train, method = "class")
-fancyRpartPlot(tree)
+fancyRpartPlot(tree_all)
 ```
 
 ```{r}
