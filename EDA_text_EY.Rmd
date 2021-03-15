@@ -67,23 +67,34 @@ amenities %>%
   group_by(name) %>%
   summarize(n=n())
 
+
+sale_listings_clean %>%
+  group_by(area_name) %>%
+  summarize(mean = mean(price), n=n()) 
+
+sale_listings_clean %>%
+  group_by(addr_hood) %>%
+  summarize(mean = mean(price), n=n()) 
 ```
 - there are 211 unique zip codes - do we want to use the addr_zip as a predictor? It seems like on the website of Zillows group, zip codes are included to provide estimated price 
 
 - If we want to use addr_city as a predictor, we need to decide on what level of municipalities we want to use. Right now there are 113 unique addr_city after cleaning. Some listed "cities" are actually neighborhoods in the county and only has one listing. How do we want to deal with that? 
 
+-Use geospatial coordinates; use zip code 
+
 ## Exploratory Data Analysis 
 ```{r}
 #the unique property id of amenities and sale_listings do not match
 length(unique(amenities$property_id))
+#
 length(unique(sale_listings$property_id))
 
 summary(sale_listings_clean)
 
 #examine listings with odd numbers 
 
-#sale_listings_clean %>%
-#  filter(bedrooms == 99)
+sale_listings_clean %>%
+  filter(bedrooms == 99)
 
 #sale_listings_clean %>%
 #  arrange(desc(bedrooms))
@@ -99,6 +110,11 @@ summary(sale_listings_clean)
 
 #sale_listings_clean %>%
 #  filter(year_built == 0)
+
+unique(sale_listings_clean$bedrooms)
+
+sale_listings_clean %>%
+  filter(bedrooms == 44)
 ```
 
 ### Questions: 
