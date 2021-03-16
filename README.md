@@ -6,3 +6,5 @@ StreetEasy
 - Elaine Ye
 - Emma Scott
 - Lauren Low
+- Dayana Meza 
+
