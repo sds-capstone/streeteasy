@@ -5,11 +5,10 @@ output: html_document
 
 ```{r loading packages}
 library(dplyr)
-library(rpart)
-library(rattle)
-library(ggplot2)
 library(tidymodels)
-library(rpart.plot)
+library(rattle)
+library(rpart)
+library(randomForest)
 ```
 
 ```{r loading and cleaning}
@@ -32,14 +31,27 @@ tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + yea
 fancyRpartPlot(tree_all)
 ```
 
-```{r}
-price_prediction <- predict(tree_all, sale_listings, type = 'class')
+```{r calculating accuracy of decision tree}
+price_prediction_tree <- predict(tree_all, sale_listings, type = 'class')
 
 # comparing predictions to actual prices
-table <- table(Price = sale_listings$price, Prediction = price_prediction)
+table <- table(Price = sale_listings$price, Prediction = price_prediction_tree)
 
 # determining model accuracy
 accuracy_Test <- sum(diag(table)) / sum(table)
 print(paste('Accuracy for test', accuracy_Test))
 ```
+
+```{r developing a random forest}
+# we can't include size_sqft + time_to_subway + year_built because there are missing values... can we impute/substitute values in???
+sale_listings_rf = randomForest(price ~ bedrooms + bathrooms + addr_lat + addr_lon, data = sale_listings_adj, ntree = 10)
+
+price_prediction_rf = predict(sale_listings_rf, sale_listings, type = "response")
+
+table(Price = sale_listings$price, Prediction = price_prediction_rf)
+
+varImpPlot(price_prediction_rf)
+```
+
+
 
