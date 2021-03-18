@@ -9,6 +9,7 @@ library(tidymodels)
 library(rattle)
 library(rpart)
 library(randomForest)
+library(MLmetrics)
 ```
 
 ```{r loading and cleaning}
@@ -44,14 +45,19 @@ print(paste('Accuracy for test', accuracy_Test))
 
 ```{r developing a random forest}
 # we can't include size_sqft + time_to_subway + year_built because there are missing values... can we impute/substitute values in???
-sale_listings_rf = randomForest(price ~ bedrooms + bathrooms + addr_lat + addr_lon, data = sale_listings_adj, ntree = 10)
+sale_listings_rf <- randomForest(price ~ bedrooms + bathrooms + addr_lat + addr_lon, data = sale_listings_adj, ntree = 10)
 
-price_prediction_rf = predict(sale_listings_rf, sale_listings, type = "response")
+price_prediction_rf <- predict(sale_listings_rf, sale_listings, type = "response")
 
-table(Price = sale_listings$price, Prediction = price_prediction_rf)
+t <- table(Price = sale_listings$price, Prediction = price_prediction_rf)
 
-varImpPlot(price_prediction_rf)
+varImpPlot(sale_listings_rf)
 ```
 
+```{r tried to mape ):}
+price_prediction_rf <- as.data.frame(price_prediction_rf)
+price_prediction_rf <- as.integer(price_prediction_rf$price_prediction_rf)
+MAPE(y_pred = price_prediction_rf, y_true = sale_listings$price)
+```
 
 
