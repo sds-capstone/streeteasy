@@ -1,0 +1,37 @@
+---
+title: "main"
+author: "Yanwan Zhu"
+date: "3/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+# Use the pre-processing script
+source("pre-processing.R")
+```
+
+
+Right now, the pre-processing script only has two functions.
+
+```{r sourced functions}
+# Use functions to load and clean data
+load_data()
+clean_data()
+```
+
+## Exploratory Data Analysis
+
+## Models
+
+`null_naive_ml.R`: null model using the mean price \
+`linear_reg_ml.Rmd`: linear regression models \
+`decision_tree_analysis.Rmd`: decision tree and random forest models \
+
+### Baseline model: Linear Regression
+
+### Baseline model:Decision Tree
+
+
