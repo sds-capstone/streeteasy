@@ -14,8 +14,8 @@ library(SnowballC)
 
 ```{r message=FALSE, warning=FALSE}
 library(readr)
-sale_listings <- read_csv("capstone_data/sale_listings.csv") 
-amenities <- read_csv("capstone_data/amenities.csv")
+sale_listings <- read_csv("sale_listings.csv") 
+amenities <- read_csv("amenities.csv")
 ```
 
 ## Data Cleaning 
@@ -222,5 +222,103 @@ bi_freq <- sale_bi_count %>%
   geom_bar(stat = "identity")
 bi_freq
 ```
+
+## Data Cleaning continue: March 17, 2021 
+
+```{r}
+#examine percentile of the data 
+#keep looking at price = 1; and it seems like 95% is good place to go 
+quantile(sale_listings$price, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1))
+```
+
+```{r}
+#examine housing price by housing type 
+#C - commercial has the highest avg_price, then townhouse 
+#if we were to use housing types as a var, make sure to filter out type X since it only has one entry 
+sale_listings %>%
+  group_by(unittype) %>%
+  summarize(n=n(), avg_price = mean(price)) %>%
+  arrange(desc(avg_price))
+```
+
+```{r}
+#original listings: 
+#https://www.zillow.com/homes/160-Carroll-St-Apt-1-Brooklyn,-NY,-11231_rb/2113383776_zpid/
+#https://www.zillow.com/homedetails/160-Carroll-St-APT-2-Brooklyn-NY-11231/2115094736_zpid/
+sale_listings %>%
+  filter(price == 1)
+#so they are NOT duplicates but in the same floor same building, and their price is not 1 -- in this case should we N/A their price? Use website info to fill in? 
+
+#after removing the lowest price, the lowest price is 40000
+sale_listings_1 <- sale_listings %>%
+  filter(price!=1) 
+
+quantile(sale_listings_1$price, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1))
+#df %>% filter(Point < quantile(df$Point, 0.95))
+
+#smaller or equal to 95 percentile 
+sale_listings_1 <- sale_listings_1 %>%
+  filter(price <= quantile(sale_listings_1$price, 0.95))
+```
+
+```{r}
+#still many wierd entries  
+summary(sale_listings_1)
+
+quantile(sale_listings_1$bedrooms, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1))
+
+sale_listings_1 %>%
+  filter(bedrooms == 99)
+
+sale_listings_1 %>%
+  filter(addr_street == '151 COLUMBIA AVENUE')
+#https://www.zillow.com/homedetails/151-Columbia-Ave-Jersey-City-NJ-07307/68301038_zpid/
+#based on the link I think bathrooms should be 6, but there is no sqrt_feet, sold price is 999,900 
+#do we want to pull the price from the website? we don't know when the data is pulled and the price online might be different 
+sale_listings_1 %>%
+  filter(bathrooms == 66)
+#1150 Fifth Avenue is a building 
+sale_listings_1 %>%
+  filter(addr_street == "1150 Fifth Avenue")
+#didn't not find unit 1A that has 99 bedrooms online 
+
+#wow so 12.5% of the data has 0 sqrt_feet 
+quantile(sale_listings_1$size_sqft, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1), na.rm = TRUE)
+
+#size_sqrt has 10959 missing values and 10222 0 values 
+
+# https://streeteasy.com/building/226-west-111-street-new_york#tab_building_detail=2
+#for 226 West 111th St unit 11, the website on streeteasy shows 0 sqrt_ft for listings
+#https://www.zillow.com/homedetails/226-W-111th-St-APT-11-New-York-NY-10026/2122774251_zpid/
+#but when search on zillow, the size is available, and the price matches 
+#https://www.zillow.com/homedetails/226-W-111th-St-APT-11-New-York-NY-10026/2122774251_zpid/
+
+#n. of 0 values 
+sum(sale_listings_1$size_sqft == 0, na.rm = TRUE)
+
+sale_listings_2 <- sale_listings_1 %>%
+  filter(size_sqft != 588527) %>%
+  filter(bedrooms != 99) %>%
+  filter(bathrooms != 66) 
+
+#21 rows for time_to_subway == 6200617 
+sale_listings_1 %>%
+  filter(time_to_subway == 6200617)
+
+#dont understand where the time_to_subway is 
+#https://streeteasy.com/building/114-butler-street-brooklyn
+sale_listings_1 %>%
+  filter(addr_street == "114 Butler Street")
+```
+
+```{r}
+sale_listings_1 
+```
+
+
+
+
+
+
 
 
