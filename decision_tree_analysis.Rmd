@@ -1,0 +1,67 @@
+---
+title: "decision_tree_analysis"
+output: html_document
+---
+
+```{r loading packages}
+library(dplyr)
+library(tidymodels)
+library(rattle)
+library(rpart)
+library(randomForest)
+library(MLmetrics)
+# install.packages(ie2misc)
+library(ie2misc) 
+```
+
+```{r loading and cleaning}
+sale_listings <- read.csv("/Users/llow/Desktop/capstone/streeteasy_data/sale_listings.csv")
+sale_listings$size_sqft[sale_listings$size_sqft == 0] <- NA
+sale_listings
+```
+
+```{r narrowing location data}
+sale_listings_adj <- sale_listings %>%
+  filter(addr_lat > 35,
+         addr_lon < -70, 
+         addr_lon > -76)
+```
+
+```{r simple decision tree with location and other variables}
+train <- c(sample(1:50, 20), sample(51:100, 20), sample(101:150, 20))
+tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built + addr_lat + addr_lon, data = sale_listings_adj, subset = train, method = "class", control = rpart.control(
+              minsplit =5, 
+              minbucket = 5, cp = .01))
+fancyRpartPlot(tree_all)
+```
+
+```{r calculating accuracy of decision tree}
+price_prediction_tree <- predict(tree_all, sale_listings, type = 'class')
+
+# comparing predictions to actual prices
+table <- table(Price = sale_listings$price, Prediction = price_prediction_tree)
+
+# determining model accuracy
+accuracy_Test <- sum(diag(table)) / sum(table)
+print(paste('Accuracy for test', accuracy_Test))
+```
+
+```{r developing a random forest}
+# we can't include size_sqft + time_to_subway + year_built because there are missing values... can we impute/substitute values in???
+sale_listings_rf <- randomForest(price ~ bedrooms + bathrooms + addr_lat + addr_lon, data = sale_listings_adj, ntree = 10)
+
+price_prediction_rf <- predict(sale_listings_rf, sale_listings, type = "response")
+
+t <- table(Price = sale_listings$price, Prediction = price_prediction_rf)
+
+varImpPlot(sale_listings_rf)
+```
+
+```{r tried to mape ):}
+price_prediction_rf <- as.data.frame(price_prediction_rf)
+price_prediction_rf <- as.integer(price_prediction_rf$price_prediction_rf)
+   # https://yardstick.tidymodels.org/reference/mape.html
+mape_vec(price_prediction_rf,sale_listings$price, na_rm = TRUE)
+```
+
+<!-- Forecast is off by 31%, will probably will work better after data cleaning --> 
