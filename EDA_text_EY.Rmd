@@ -245,6 +245,11 @@ sale_listings %>%
 #original listings: 
 #https://www.zillow.com/homes/160-Carroll-St-Apt-1-Brooklyn,-NY,-11231_rb/2113383776_zpid/
 #https://www.zillow.com/homedetails/160-Carroll-St-APT-2-Brooklyn-NY-11231/2115094736_zpid/
+
+#https://streeteasy.com/property/9776851-160-carroll-street-1
+# id9776851: $1,925,000 on 10/30/2020
+#https://streeteasy.com/property/7854659-160-carroll-street-2
+#id 7854659: $2,275,000 on 09/29/20 
 sale_listings %>%
   filter(price == 1)
 #so they are NOT duplicates but in the same floor same building, and their price is not 1 -- in this case should we N/A their price? Use website info to fill in? 
@@ -267,8 +272,13 @@ summary(sale_listings_1)
 
 quantile(sale_listings_1$bedrooms, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1))
 
+#https://streeteasy.com/property/7954592-1150-5-avenue-1a -- still 99 beds 
 sale_listings_1 %>%
   filter(bedrooms == 99)
+#1150 Fifth Avenue is a building 
+sale_listings_1 %>%
+  filter(addr_street == "1150 Fifth Avenue")
+#didn't not find unit 1A that has 99 bedrooms online 
 
 sale_listings_1 %>%
   filter(addr_street == '151 COLUMBIA AVENUE')
@@ -277,10 +287,7 @@ sale_listings_1 %>%
 #do we want to pull the price from the website? we don't know when the data is pulled and the price online might be different 
 sale_listings_1 %>%
   filter(bathrooms == 66)
-#1150 Fifth Avenue is a building 
-sale_listings_1 %>%
-  filter(addr_street == "1150 Fifth Avenue")
-#didn't not find unit 1A that has 99 bedrooms online 
+
 
 #wow so 12.5% of the data has 0 sqrt_feet 
 quantile(sale_listings_1$size_sqft, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1), na.rm = TRUE)
@@ -291,10 +298,15 @@ quantile(sale_listings_1$size_sqft, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875,
 #for 226 West 111th St unit 11, the website on streeteasy shows 0 sqrt_ft for listings
 #https://www.zillow.com/homedetails/226-W-111th-St-APT-11-New-York-NY-10026/2122774251_zpid/
 #but when search on zillow, the size is available, and the price matches 
-#https://www.zillow.com/homedetails/226-W-111th-St-APT-11-New-York-NY-10026/2122774251_zpid/
+
+#https://streeteasy.com/property/6831651-401-east-65-street-4b
+#property id 6831651, 550 ft 
 
 #n. of 0 values 
 sum(sale_listings_1$size_sqft == 0, na.rm = TRUE)
+
+#sale_listings_1 %>%
+#  filter(size_sqft == 0)
 
 sale_listings_2 <- sale_listings_1 %>%
   filter(size_sqft != 588527) %>%
@@ -307,14 +319,32 @@ sale_listings_1 %>%
 
 #dont understand where the time_to_subway is 
 #https://streeteasy.com/building/114-butler-street-brooklyn
+#property is 9690755: where to check time_to_subway? 
 sale_listings_1 %>%
   filter(addr_street == "114 Butler Street")
 ```
 
 ```{r}
-sale_listings_1 
-```
+summary(sale_listings_1)
+quantile(sale_listings$anyrooms, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 1), na.rm = TRUE)
+#https://streeteasy.com/building/316-dongan-hills-avenue-staten_island
+#how's anyroom defined? 
+#make anyroom == 3200 NA 
+#question: for unusual numbers in one var of a listing, do we NA the var or delete the entry?
+sale_listings_3 <- sale_listings_2 %>%
+  mutate(time_to_subway = ifelse(time_to_subway %in% c(6200617,74574), NA, time_to_subway))
 
+summary(sale_listings_3)
+
+#how to know if anyrooms is reasonable or not?? 
+sale_listings %>%
+  arrange(desc(anyrooms)) %>%
+  head(50)
+
+quantile(sale_listings$time_to_subway, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.875, 0.9, 0.95, 0.99, 0.995, 0.999, 1), na.rm = TRUE)
+
+##variables that require big brains to clean: anyrooms, time_to_subway 
+```
 
 
 
