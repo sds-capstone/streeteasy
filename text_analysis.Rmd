@@ -1,10 +1,5 @@
 ---
-title: "SDS 410"
-subtitle: "StreetEasy"
-author: "Dayana Meza"
-date: "Thursday, March 4th, 2021"
-output:
-  html_document
+title: "text_analysis"
 ---
 
 ```{r, include=FALSE}
@@ -160,12 +155,7 @@ cos_sim_rom = sim2(x = data_word_vectors, y = cozy, method = "cosine", norm = "l
 #  geom_col() 
 ```
 
-<!-- Build a Classification Model --> 
-<!--
-```{r}
-# 
-```
--->
+
 
 
 
