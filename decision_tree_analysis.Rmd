@@ -10,6 +10,8 @@ library(rattle)
 library(rpart)
 library(randomForest)
 library(MLmetrics)
+# install.packages(ie2misc)
+library(ie2misc) 
 ```
 
 ```{r loading and cleaning}
@@ -26,9 +28,10 @@ sale_listings_adj <- sale_listings %>%
 ```
 
 ```{r simple decision tree with location and other variables}
-train <- c(sample(1:50, 25), sample(51:100, 25), sample(101:150, 25))
-
-tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built + addr_lat + addr_lon, data = sale_listings_adj, subset = train, method = "class")
+train <- c(sample(1:50, 20), sample(51:100, 20), sample(101:150, 20))
+tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built + addr_lat + addr_lon, data = sale_listings_adj, subset = train, method = "class", control = rpart.control(
+              minsplit =5, 
+              minbucket = 5, cp = .01))
 fancyRpartPlot(tree_all)
 ```
 
@@ -57,7 +60,8 @@ varImpPlot(sale_listings_rf)
 ```{r tried to mape ):}
 price_prediction_rf <- as.data.frame(price_prediction_rf)
 price_prediction_rf <- as.integer(price_prediction_rf$price_prediction_rf)
-MAPE(y_pred = price_prediction_rf, y_true = sale_listings$price)
+   # https://yardstick.tidymodels.org/reference/mape.html
+mape_vec(price_prediction_rf,sale_listings$price, na_rm = TRUE)
 ```
 
-
+<!-- Forecast is off by 31%, will probably will work better after data cleaning --> 
