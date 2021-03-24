@@ -2,7 +2,7 @@
 title: Title of submission to PLOS journal
 author:
   - name: Yipeng Lai
-    email: can't find her email???
+    email: yipengl@zillowgroup.com
     affiliation: StreetEasy
   - name: Lauren Low
     email: llow@smith.edu
@@ -13,8 +13,8 @@ author:
    - name: Emma Scott
     email: escott@smith.edu
     affiliation: Smith College
-  - name: Elaine Xu
-    email: exu64@smith.edu
+  - name: Elaine Ye
+    email: xye@smith.edu
     affiliation: Smith College
   - name: Yanwan Zhu
     email: yzhu62@smith.edu
