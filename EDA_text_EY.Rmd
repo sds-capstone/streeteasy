@@ -14,8 +14,8 @@ library(SnowballC)
 
 ```{r message=FALSE, warning=FALSE}
 library(readr)
-sale_listings <- read_csv("sale_listings.csv") 
-amenities <- read_csv("amenities.csv")
+sale_listings <- read_csv("data/sale_listings.csv") 
+amenities <- read_csv("data/amenities.csv")
 ```
 
 ## Data Cleaning 
@@ -347,8 +347,66 @@ quantile(sale_listings$time_to_subway, probs = c(0, 0.125,0.375, 0.5, 0.625, 0.8
 ```
 
 
+### Geospatial Data 
+```{r}
+summary(sale_listings)
+```
+
+```{r}
+#zipcodeR is a quite new package; there are other ways to gather lat/lon such as using tidygeocoder or ggmap. The lon/lat i created is based on zipcode and does not have the precision of using street names 
+library(zipcodeR)
+data("zip_code_db")
+#dataset from zipcodeR 
+zip_code <- zip_code_db %>%
+  select(zipcode, major_city, county, state, lat, lng)
+
+#some zipcodes do not have leading zeros - they should be NJ zipcodes 
+sale_listings_join <- sale_listings %>%
+  mutate(addr_zip = ifelse(addr_zip < 10000, paste0("0", addr_zip), addr_zip)) %>%
+  rename("zipcode" = "addr_zip") %>%
+  mutate(zipcode = as.character(zipcode))
+
+sale_listings_join <- left_join(sale_listings_join, zip_code, by = "zipcode")
+
+#filter those who have zipcode, but do not have lon/lat in zipcodeR 
+sale_listings_join %>%
+  filter(is.na(zipcode) == FALSE, is.na(lat) == TRUE) %>%
+  group_by(zipcode) %>%
+  summarize(n=n())
+
+#since the lat/lon in sale_listings have some unusual coordinates, i mainly use coordinates in zip_code_db since they are really similar
+sale_listings_join_1 <- sale_listings_join %>%
+  mutate(lat = ifelse(zipcode %in% c("11249", "11466"), addr_lat, lat),
+         lng = ifelse(zipcode %in% c("11249", "11466"), addr_lon, lng)) 
+
+sale_listings_join_1 %>%
+  filter(is.na(listing_description) ==TRUE)
+
+#sale_listings 59661
+#unique property_id = 51355
+length(unique(sale_listings$property_id))
+length(unique(sale_listings$id))
+
+#my_data %>% distinct(Sepal.Length, .keep_all = TRUE)
+
+duplicate_id <- sale_listings_join_1 %>%
+  group_by(property_id) %>%
+  summarize(n=n()) %>%
+  filter(n > 1)
+
+sale_listings_join_1 %>%
+  filter(property_id %in% duplicate_id$property_id) %>%
+  arrange(property_id) 
+
+#choose the larger id for same property_id?? 
+#property_id == 77131, the smaller id is the more recent one 
+```
 
 
 
+Citation: 
+https://www.gavinrozzi.com/post/an-r-package-for-zip-codes/
+
+https://www.datanovia.com/en/lessons/identify-and-remove-duplicate-data-in-r/
 
 
