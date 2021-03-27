@@ -28,6 +28,10 @@ sale_listings_clean <- sale_listings %>%
 sale_listings_clean <- sale_listings_clean %>%
   mutate(log10_price = log10(price))
 
+sale_listings_clean %>%
+  distinct(id, .keep_all = TRUE) %>%
+  group_by(addr_state) %>%
+  summarize(n=n())
 ```
 
 
@@ -447,8 +451,15 @@ final_clean <- duplicate_des  %>%
   filter(len_des == max(len_des)) %>%
   filter(bedrooms == max(bedrooms)) %>%
   arrange(property_id) %>%
-  distinct(property_id, .keep_all = TRUE)
+  distinct(property_id, .keep_all = TRUE) %>%
+  select(-na_row, -len_des)
 
+sale_listings_join_c %>%
+  filter(!property_id %in% duplicate_id$property_id) %>%
+  rbind.data.frame(final_clean)
+
+sale_listings_join_c %>%
+  filter(is.na(property_id) == TRUE)
 ```
 
 

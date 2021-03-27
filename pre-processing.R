@@ -2,6 +2,9 @@
 
 library(tidyverse)
 library(readr)
+library(zipcodeR)
+library(stringr)
+
 
 # To use this script:
 # source("pre-processing.R")
@@ -23,5 +26,83 @@ clean_data <- function(){
   
   sale_listings <<- sale_listings %>%
     # Reasonable range of sale prices
-    filter(price < quantile(price,0.95))
+    filter(price < quantile(price,0.95)) %>%
+    #filter out unreasonable numbers 
+    filter(size_sqft != 588527) %>%
+    filter(bedrooms != 99) %>%
+    filter(bathrooms != 66) 
+  
+  #import zipcode data 
+  data("zip_code_db")
+  
+  zip_code <- zip_code_db %>%
+    select(zipcode, major_city, county, state, lat, lng)
+  
+  sale_listings <<- sale_listings %>%
+    mutate(addr_zip = ifelse(addr_zip < 10000, paste0("0", addr_zip), addr_zip)) %>%
+    rename("zipcode" = "addr_zip") %>%
+    mutate(zipcode = as.character(zipcode))
+  
+  #join sale_listings with zipcode data
+  sale_listings <<- left_join(sale_listings, zip_code, by = "zipcode")
+  
+  #these two zipcodes did not have info in zip_code_db, so use original ones in sale_listings
+  sale_listings <<- sale_listings %>%
+    mutate(lat = ifelse(zipcode %in% c("11249", "11466"), addr_lat, lat),
+           lng = ifelse(zipcode %in% c("11249", "11466"), addr_lon, lng)) 
+  
+  #only keep the vars we want to use 
+  sale_listings <<- sale_listings %>%
+    select(id, property_id, unittype, listing_description, bedrooms, bathrooms, 
+           size_sqft, price, addr_street, addr_unit, zipcode, floor_count, 
+           year_built, is_historic, major_city:lng)
+  
+  #5763 property_id has duplicates 
+  duplicate_id <- sale_listings %>%
+    filter(!is.na(property_id)) %>%
+    group_by(property_id) %>%
+    summarize(n=n()) %>%
+    filter(n > 1)
+  
+  #12,786 listings should eventually only keep 5763
+  #make size_sqft 0 == NA 
+  duplicate_listing <- sale_listings %>%
+    mutate(size_sqft = ifelse(size_sqft == 0, NA, size_sqft)) %>%
+    filter(property_id %in% duplicate_id$property_id) 
+  
+  #count row NA 
+  na_row <- as.data.frame(rowSums(is.na(duplicate_listing))) %>%
+    rename("na_row" = "rowSums(is.na(duplicate_listing))")
+  
+  duplicate_na <- cbind.data.frame(duplicate_listing, na_row)
+  
+  #choose listing that has less NA attributes 
+  #11,334 listings 
+  duplicate_listing_2 <- duplicate_na %>%
+    group_by(property_id) %>%
+    filter(na_row == min(na_row)) 
+  
+  length_des <- as.data.frame(nchar(duplicate_listing_2$listing_description)) %>%
+    rename("len_des" = "nchar(duplicate_listing_2$listing_description)") %>%
+    mutate(len_des = as.numeric(len_des))
+  
+  duplicate_des <- cbind.data.frame(duplicate_listing_2, length_des)
+  
+  #keep the one with longer description
+  no_duplicate <- duplicate_des  %>%
+    mutate(len_des = ifelse(is.na(len_des) == TRUE, 0, len_des)) %>%
+    group_by(property_id) %>%
+    filter(len_des == max(len_des)) %>%
+    #then keep the one with more bedrooms 
+    filter(bedrooms == max(bedrooms)) %>%
+    arrange(property_id) %>%
+    #lastly keep distinct ids 
+    distinct(property_id, .keep_all = TRUE) %>%
+    select(-na_row, -len_des)
+
+  #eventually there should be about 52638 listings 
+  sale_listings <<- sale_listings %>%
+    filter(!property_id %in% duplicate_id$property_id) %>%
+    rbind.data.frame(final_clean)
+  
 }
