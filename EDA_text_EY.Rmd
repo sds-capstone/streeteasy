@@ -405,6 +405,9 @@ sale_listings_join_c <- sale_listings_join_1 %>%
 #5763 property_id has duplicates 
 duplicate_id <- sale_listings_join_c %>%
   filter(!is.na(property_id)) %>%
+
+duplicate_id <- sale_listings_join_1 %>%
+
   group_by(property_id) %>%
   summarize(n=n()) %>%
   filter(n > 1)
@@ -460,10 +463,14 @@ sale_listings_join_c %>%
 
 sale_listings_join_c %>%
   filter(is.na(property_id) == TRUE)
+
+sale_listings_join_1 %>%
+  filter(property_id %in% duplicate_id$property_id) %>%
+  arrange(property_id) 
+
+#choose the larger id for same property_id?? 
+#property_id == 77131, the smaller id is the more recent one 
 ```
-
-
-
 
 
 Citation: 
