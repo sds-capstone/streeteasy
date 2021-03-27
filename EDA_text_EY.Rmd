@@ -28,6 +28,10 @@ sale_listings_clean <- sale_listings %>%
 sale_listings_clean <- sale_listings_clean %>%
   mutate(log10_price = log10(price))
 
+sale_listings_clean %>%
+  distinct(id, .keep_all = TRUE) %>%
+  group_by(addr_state) %>%
+  summarize(n=n())
 ```
 
 
@@ -382,6 +386,11 @@ sale_listings_join_1 <- sale_listings_join %>%
 sale_listings_join_1 %>%
   filter(is.na(listing_description) ==TRUE)
 
+```
+
+
+## Remove duplicates 0324
+```{r}
 #sale_listings 59661
 #unique property_id = 51355
 length(unique(sale_listings$property_id))
@@ -389,10 +398,71 @@ length(unique(sale_listings$id))
 
 #my_data %>% distinct(Sepal.Length, .keep_all = TRUE)
 
+#only keep the vars we want to use 
+sale_listings_join_c <- sale_listings_join_1 %>%
+  select(id, property_id, unittype, listing_description, bedrooms, bathrooms, size_sqft, price, addr_street, addr_unit, zipcode, floor_count, year_built, is_historic, major_city:lng)
+
+#5763 property_id has duplicates 
+duplicate_id <- sale_listings_join_c %>%
+  filter(!is.na(property_id)) %>%
+
 duplicate_id <- sale_listings_join_1 %>%
+
   group_by(property_id) %>%
   summarize(n=n()) %>%
   filter(n > 1)
+
+#make 0 size_sqft 0 
+#1284 NA in property id 
+#sale_listings %>%
+#  filter(is.na(property_id) == TRUE)
+#12,786 listings should eventually only keep 5763
+duplicate_listing <- sale_listings_join_c %>%
+  mutate(size_sqft = ifelse(size_sqft == 0, NA, size_sqft)) %>%
+  filter(property_id %in% duplicate_id$property_id) %>%
+  arrange(property_id)
+
+#choose the larger id for same property_id?? 
+#property_id == 77131, the smaller id is the more recent one 
+
+#count row NA 
+na_row <- as.data.frame(rowSums(is.na(duplicate_listing))) %>%
+  rename("na_row" = "rowSums(is.na(duplicate_listing))")
+
+duplicate_na <- cbind(duplicate_listing, na_row)
+
+
+
+#choose listing that has less NA attributes 
+#11,334 listings 
+duplicate_listing_2 <- duplicate_na %>%
+  group_by(property_id) %>%
+  filter(na_row == min(na_row)) 
+
+library(stringr)
+
+length_des <- as.data.frame(nchar(duplicate_listing_2$listing_description)) %>%
+  rename("len_des" = "nchar(duplicate_listing_2$listing_description)") %>%
+  mutate(len_des = as.numeric(len_des))
+
+duplicate_des <- cbind.data.frame(duplicate_listing_2, length_des)
+
+#keep the one with longer description
+final_clean <- duplicate_des  %>%
+  mutate(len_des = ifelse(is.na(len_des) == TRUE, 0, len_des)) %>%
+  group_by(property_id) %>%
+  filter(len_des == max(len_des)) %>%
+  filter(bedrooms == max(bedrooms)) %>%
+  arrange(property_id) %>%
+  distinct(property_id, .keep_all = TRUE) %>%
+  select(-na_row, -len_des)
+
+sale_listings_join_c %>%
+  filter(!property_id %in% duplicate_id$property_id) %>%
+  rbind.data.frame(final_clean)
+
+sale_listings_join_c %>%
+  filter(is.na(property_id) == TRUE)
 
 sale_listings_join_1 %>%
   filter(property_id %in% duplicate_id$property_id) %>%
@@ -401,10 +471,6 @@ sale_listings_join_1 %>%
 #choose the larger id for same property_id?? 
 #property_id == 77131, the smaller id is the more recent one 
 ```
-
-
-
-
 
 
 Citation: 
