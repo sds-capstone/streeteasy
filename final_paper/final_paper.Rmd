@@ -1,5 +1,5 @@
 ---
-title: Title of submission to PLOS journal
+title: Predicting Real Estate Prices Using Text-Based Analysis and Machine Learning Algorithms
 author:
   - name: Yipeng Lai
     email: yipengl@zillowgroup.com
