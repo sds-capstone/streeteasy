@@ -2,7 +2,6 @@
 
 library(tidyverse)
 library(readr)
-library(zipcodeR)
 library(stringr)
 
 
@@ -18,13 +17,8 @@ load_data <- function(){
 clean_data <- function(){
 
   sale_listings <<- sale_listings %>%
-    # Make state names consistent
-    mutate(addr_state = ifelse(addr_state == "New Jersey", "NJ", 
-                               ifelse(addr_state == "New York", "NY", addr_state))) %>%
     # Make sure we have valid prices
-    filter(price != 0)
-  
-  sale_listings <<- sale_listings %>%
+    filter(price != 0)%>%
     # Reasonable range of sale prices
     filter(price < quantile(price,0.95)) %>%
     #filter out unreasonable numbers 
@@ -33,6 +27,7 @@ clean_data <- function(){
     filter(bathrooms != 66) 
   
   #import zipcode data 
+  library(zipcodeR)
   data("zip_code_db")
   
   zip_code <- zip_code_db %>%
@@ -49,13 +44,11 @@ clean_data <- function(){
   #these two zipcodes did not have info in zip_code_db, so use original ones in sale_listings
   sale_listings <<- sale_listings %>%
     mutate(lat = ifelse(zipcode %in% c("11249", "11466"), addr_lat, lat),
-           lng = ifelse(zipcode %in% c("11249", "11466"), addr_lon, lng)) 
-  
-  #only keep the vars we want to use 
-  sale_listings <<- sale_listings %>%
+           lng = ifelse(zipcode %in% c("11249", "11466"), addr_lon, lng)) %>%
     select(id, property_id, unittype, listing_description, bedrooms, bathrooms, 
            size_sqft, price, addr_street, addr_unit, zipcode, floor_count, 
-           year_built, is_historic, major_city:lng)
+           year_built, is_historic, major_city:lng)%>%
+    rename(long=lng)
   
   #5763 property_id has duplicates 
   duplicate_id <- sale_listings %>%
@@ -103,6 +96,6 @@ clean_data <- function(){
   #eventually there should be about 52638 listings 
   sale_listings <<- sale_listings %>%
     filter(!property_id %in% duplicate_id$property_id) %>%
-    rbind.data.frame(final_clean)
+    rbind.data.frame(no_duplicate)
   
 }

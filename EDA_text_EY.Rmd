@@ -432,7 +432,6 @@ na_row <- as.data.frame(rowSums(is.na(duplicate_listing))) %>%
 duplicate_na <- cbind(duplicate_listing, na_row)
 
 
-
 #choose listing that has less NA attributes 
 #11,334 listings 
 duplicate_listing_2 <- duplicate_na %>%
@@ -472,6 +471,59 @@ sale_listings_join_1 %>%
 #property_id == 77131, the smaller id is the more recent one 
 ```
 
+```{r size_sqft}
+library(mice)
+sale_listings_mice <- sale_listings_join_1 %>%
+  # variables that are usable
+  select(id, property_id, unittype, listing_description, bedrooms, bathrooms, size_sqft, price, addr_street, addr_unit, zipcode, floor_count, year_built, is_historic, major_city:lng) %>%
+  # make sizes that don’t make sense NA
+  mutate(size_sqft = ifelse(size_sqft < 30, NA, size_sqft))
+
+# Imputation
+# Create a predictor matrix
+allVars <- names(sale_listings_mice)
+predictorMatrix <- matrix(0, ncol = length(allVars), nrow = length(allVars))
+rownames(predictorMatrix) <- allVars
+colnames(predictorMatrix) <- allVars
+imputerVars <- c("unittype", "bedrooms", "bathrooms", "floor_count", "major_city", "state")
+imputerMatrix <- predictorMatrix
+imputerMatrix[,imputerVars] <- 1
+imputedVars <- c("size_sqft")
+imputedMatrix <- predictorMatrix
+imputedMatrix[imputedVars,] <- 1
+predictorMatrix <- imputerMatrix * imputedMatrix
+diag(predictorMatrix) <- 0
+
+# method = "norm.predict" (regression?)
+# https://stats.stackexchange.com/questions/100841/imputation-by-regression-in-r
+sale_listings_imp <- mice(sale_listings_mice, m=1, method = "norm.predict", predictorMatrix = predictorMatrix,seed = 410)
+sale_listings_imputed <- complete(sale_listings_imp)
+# md.pattern(sale_listings_mice)
+```
+
+Some references for `mice`:
+- https://rpubs.com/kaz_yos/mice-exclude: prediction matrix
+- https://rmisstastic.netlify.app/tutorials/erler_course_multipleimputation_2018/erler_practical_mice_2018#run_the_imputation
+- https://datascienceplus.com/imputing-missing-data-with-r-mice-package/
+- https://www.kaggle.com/captcalculator/imputing-missing-data-with-the-mice-package-in-r (also predicting housing prices...should look into this later!)
+- https://rstudio-pubs-static.s3.amazonaws.com/344055_0c737f77c0ef4e36b6865cb843a7bb4a.html (another tutorial that I should look deeper into)
+- https://data.library.virginia.edu/getting-started-with-multiple-imputation-in-r/ (with some imputation references...)
+
+```{r misc data cleaning snippets}
+# imputed dataset: no NA in sizes!
+sum(is.na(sale_listings_imputed$size_sqft))
+# bathroom: no NA, but 495 zero’s
+sum(sale_listings_join_1$bathrooms==0, na.rm=TRUE)
+# bedroom: no NA, 4959 zero’s, possible b/c studio
+sum(sale_listings_join_1$bedrooms==0, na.rm=TRUE)
+# it is possible that listings w/o bathroom and bedroom are expensive because they are commercial listings...
+# description says "test"? 	address: 1 broadway
+sale_listings %>%
+  filter(listing_description == "test"| listing_description == "TEST")
+# uninformative descriptions: are they not real listings??
+sale_listings %>%
+  filter(nchar(listing_description)<50)
+```
 
 Citation: 
 https://www.gavinrozzi.com/post/an-r-package-for-zip-codes/
