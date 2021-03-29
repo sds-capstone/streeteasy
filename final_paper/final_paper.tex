@@ -351,12 +351,8 @@ the number of bathrooms, size in square feet), geospatial information
 (e.g.~state, zipcode, longitude, latitude), and a text description of
 each listing.
 
-\textbf{(Make a table of variable names and descriptions?)}
-
 \hypertarget{data-preprocessing}{%
 \subsection{Data Preprocessing}\label{data-preprocessing}}
-
-\textbf{(More description/plots of EDA here?)}
 
 Exploratory data analyses show that the distributions of the variables
 are skewed and 13 of them contain NA values for up to 11242
@@ -399,6 +395,47 @@ to impute missing property size values by regression
 (\texttt{norm.predict}) {[}5{]}. The predictors of the imputation
 consist of the number of bedrooms, the number of bathrooms, unit type,
 floor count, city, and state.
+
+After data cleaning, we eventually have 41327 listings in the data set.
+The number of bedrooms ranges from 0 to 36 with a mean of 2.58 (SD =
+2.11). The number of bathrooms ranges from 0 to 20 with a mean of 1.13
+(SD = 1.13). On average, the listings are located on the 10th floor, and
+were built in 1946. The distribution of \texttt{size} is skewed, with a
+mean of 1496 square feet but a large standard deviation (SD = 1120.27).
+Similarly, \texttt{price} also has a skewed distribution: the mean price
+is 1,125,424 dollars, but the standard deviation is over 870,000. In our
+analysis, we will log transform \texttt{size\_sqrt} and \texttt{price}
+when necessary.
+
+\begin{table}[htpb]\caption{Descriptive statistics for continuous variables}
+\begin{center}
+\begin{scriptsize} 
+\begin{tabular} {l r r r r r r r r }
+ \multicolumn{ 8 }{l}{ A table from the psych package in R } \cr 
+ \hline Variable  &   {vars} &  {n} &  {mean} &  {sd} &  {medin} &  {min} &  {max} &  {range}\cr 
+  \hline 
+bedrooms   &  1  &  41327  &        2.58  &       2.11  &       2  &      0  &       36  &       36 \cr 
+ bathrooms   &  2  &  41327  &        1.85  &       1.13  &       2  &      0  &       20  &       20 \cr 
+ size\_sqft   &  3  &  31955  &     1496.34  &    1120.27  &    1190  &    100  &    36000  &    35900 \cr 
+ floor\_count   &  4  &  41327  &        9.94  &      14.30  &       4  &      0  &       96  &       96 \cr 
+ year\_built   &  5  &  35888  &     1946.03  &     161.83  &    1955  &      0  &     2021  &     2021 \cr 
+ price   &  6  &  41327  &  1125434.27  &  874393.42  &  829000  &  40000  &  4599000  &  4559000 \cr 
+ \hline 
+\end{tabular}
+\end{scriptsize}
+\end{center}
+\label{default}
+\end{table}
+
+Figure 1 shows the distributions of the log price of listings by state,
+and the vertical lines indicate the mean log price for each state. After
+log-transformation, the price variable is more normally distributed. In
+general, homes in New York State are more expensive than those in New
+Jersey.
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{eda} \caption{Log-transformed Distribution of Home Prices}\label{fig:unnamed-chunk-1}
+\end{figure}
 
 \hypertarget{data-analysis-plans}{%
 \subsection{Data Analysis Plans}\label{data-analysis-plans}}

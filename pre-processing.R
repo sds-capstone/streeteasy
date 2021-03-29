@@ -18,13 +18,15 @@ clean_data <- function(){
 
   sale_listings <<- sale_listings %>%
     # Make sure we have valid prices
-    filter(price != 0)%>%
+    filter(price > 1)%>%
     # Reasonable range of sale prices
-    filter(price < quantile(price,0.95)) %>%
-    #filter out unreasonable numbers 
+    filter(price < quantile(price, 0.95)) %>%
+    # Filter out unreasonable numbers 
     filter(size_sqft != 588527) %>%
     filter(bedrooms != 99) %>%
-    filter(bathrooms != 66) 
+    filter(bathrooms != 66) %>%
+    # Make unreasonable sizes NA
+    mutate(size_sqft = ifelse(size_sqft < 30, NA, size_sqft))
   
   #import zipcode data 
   library(zipcodeR)
