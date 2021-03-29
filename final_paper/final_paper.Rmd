@@ -1,5 +1,5 @@
 ---
-title: Predicting Real Estate Prices Using Text-Based Analysis and Machine Learning Algorithms
+title: Predicting Real Estate Prices Using Natural Language Processing and Machine Learning Algorithms
 author:
   - name: Yipeng Lai
     email: yipengl@zillowgroup.com
@@ -22,9 +22,9 @@ author:
 
 address:
   - code: Smith College
-    address: 1 Chapin Way, Northampton, MA 01063
+    address: Smith College, 1 Chapin Way, Northampton, MA 01063
   - code: StreetEasy
-    address: 1250 Broadway, New York, NY 10001
+    address: StreetEasy, 1250 Broadway, New York, NY 10001
 abstract: |
   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
   
@@ -36,7 +36,6 @@ output: rticles::plos_article
 csl: plos.csl
 ---
 
-_Text based on plos sample manuscript, see <https://journals.plos.org/ploscompbiol/s/latex>_
 
 # Introduction
 
@@ -51,7 +50,7 @@ StreetEasy’s existing predictive tool uses metrics on bedrooms, bathrooms, pro
 One feature the current machine learning algorithm neglects is the descriptive text of given listings.
 A primary objective of this project is to convert text-based listing descriptions into input variables for the purpose of improving predictive model accuracy.
 In particular, we want to research whether listing descriptions can be utilized to create meaningful features to improve the accuracy of predicting home prices.
-Past literature supports leveraging machine learning algorithms with natural language processing to improve prediction accuracy @chen2018integrating [@ivanov2020improving].
+Current literature supports leveraging machine learning algorithms with natural language processing to improve prediction accuracy @chen2018integrating [@ivanov2020improving].
 
 ## Research Questions and Objectives
 Some research questions include:
@@ -62,7 +61,7 @@ Some research questions include:
 
 Many questions already have preliminary answers.
 In StreetEasy’s current model, home prices are predicted using variables such as number of bedrooms, number of bathrooms, property size, time to subway, year the property was built and property neighborhood/geographic coordinates.
-To predict home prices more accurately, we include the listing description in the model.
+To predict home prices more accurately, we include the listing description text as tokens in the machine learning model. 
 Using  bag-of-words method and word embeddings to extract keywords, our analysis has yielded some key phrases such as “stainless steel,” “washer dryer,” “windows,” “storage,” “central park” and “closet space”.
 
 In asking and answering these questions our goal is to improve upon StreetEasy’s existing machine learning algorithm by combining current models with text-based analysis to predict home prices.
@@ -74,34 +73,35 @@ By creating new variables from the listing descriptions – binary variables for
 
 The data provided by our project partner includes two datasets on sale listings and amenities.
 StreetEasy collects information from agents by having them directly enter listing information on the website or through a feed from their brokerage.
-StreetEasy verifies the listing and property information based on records from New York City’s Department of Finance and Department of Buildings.
+StreetEasy verifies the listing and property information based on records from New York City’s Department of Finance and Department of Buildings  @streeteasy_2019.
 
 Our main data set consists of 59,661 sale listings of 52639 unique properties listed and/or sold on Streeteasy in 2019.
-It has 31 variables including home price, property attributes (e.g., the number of bedrooms, the number of bathrooms, size in square feet),  geospatial information (e.g. state, zipcode, latitude, latitude), and a text description of each listing.
+It has 31 variables including home price, property attributes (e.g., the number of bedrooms, the number of bathrooms, size in square feet),  geospatial information (e.g. state, zipcode, longitude, latitude), and a text description of each listing.
 
 **(Make a table of variable names and descriptions?)**
 
 ## Data Preprocessing
 
 **(More description/plots of EDA here?)**
+
 Exploratory data analyses show that the distributions of the variables are skewed and 13 of them contain NA values for up to 11242 observations.
 We performed data cleansing, reduction, and imputation to pre-process our data before running the analyses.
 First, we select the 95% quantile of the non-zero values as a reasonable range of the listing prices.
 We also filter out the outliers with unusually large values for property size and number of bedrooms and bathrooms.
 
-In addition, we use zip codes to fill in an estimate for observations without valid latitude/longitude information and created more geographical variables such as city, county, and state using the R package zipcodeR that pulls information from U.S. Census data.
+In addition, we use zip codes to fill in an estimate for observations without valid latitude/longitude information and created more geographical variables such as city, county, and state using the `zipcodeR` package that pulls information from U.S. Census data @zipcodeR_2020.
 We perform these two steps because of the varying quality of geospatial information in the original data set.
 First, some of the listings contain four-digit zip codes and erroneous longitude and latitude values such as (0, 0).
 Secondly, the original location information about areas and neighborhoods was entered manually by agents, so the location variables do not have uniform criteria and may differ in the level of specificity.
-Although the new geographic coordinates might not have street-level precision, by adding a leading zero to four-digit zip codes and incorporating associated features from the zipcodeR package, we are able to obtain geographic information that is consistent across listings. 
+Although the new geographic coordinates might not have street-level precision, by adding a leading zero to four-digit zip codes and incorporating associated features from the `zipcodeR` package, we are able to obtain geographic information that is consistent across listings. 
 
 In order to prevent data leakage for our machine learning models, we remove the listings that appear more than once in the data set.
 The duplicate listings are results of agents posting the same listing multiple times with updated information.
 In order to eliminate duplicates, we first group the listings by `property_id` and keep the ones with the fewest NA values for all variables within each group.
 Next, we select the rows with the longest listing descriptions and the largest number of bedrooms within each group.
-Last, we use the distinct() function to keep one unique listing corresponding to each `property_id`. 
+Last, we use the `distinct()` function to keep one unique listing corresponding to each `property_id`. 
 
-Because nearly 20% of the observations do not have values for the `size_sqft` variable, we plan to use the `mice` package to impute missing property size values by regression (`norm.predict`).
+Because nearly 20% of the observations do not have values for the `size_sqft` variable, we plan to use the `mice` package to impute missing property size values by regression (`norm.predict`) @mice_2011.
 The predictors of the imputation consist of the number of bedrooms, the number of bathrooms, unit type, floor count, city, and state.
 
 ## Data Analysis Plans
@@ -119,17 +119,18 @@ For the linear regression model, we plan to use stepwise selection to select the
 
 ## Models with Text Features
 
-To convert the listing descriptions into meaningful text-based features, the words are (1) tokenized: the words inside of the listing descriptions are split into word or words (i.e., multiple words tokenzied together are called ‘n-grams’) known as tokens to create a one-token-per-row for text analysis; (2) vetted for stop words: removing words that have little to no meaningful information for analysis (e.g., ‘the’, ‘as’, ‘a’, ‘of’); (3) stemmed: finding the base or root of words (e.g., we want to categorize ‘windows’ the same as ‘window’), and lastly (4) analyzed for extracting keywords and n-grams.
-**[add a sentence here about the benefits of including n-grams in model]**
+To convert the listing descriptions into meaningful text-based features, the words are 
+(1) tokenized: the words inside of the listing descriptions are split into word or words (i.e., multiple words tokenzied together are called ‘n-grams’) known as tokens to create a one-token-per-row for text analysis; 
+(2) vetted for stop words: removing words that have little to no meaningful information for analysis (e.g., ‘the’, ‘as’, ‘a’, ‘of’); 
+(3) stemmed: finding the base or root of words (e.g., we want to categorize ‘windows’ the same as ‘window’), and lastly 
+(4) analyzed for extracting keywords and n-grams. 
 N-grams generate words that commonly occur together and improve accuracy of sentiment analysis models @kruczekngrams[@pitler2010using].
-This allows us to infer the value from text using regular expressions or models.
-
-
-Different ways for featurizing text data:
-
-- Define a target feature/tag such as “whether the apartment has been recently renovated” and infer the value from text using regular expressions or models
-- Use bag-of-words method by counting the frequency of words observed in each document
-- Use pre-trained word embeddings or train word embeddings
-
+These steps allow us to infer the value from the listing descriptions using regular expressions or models. 
+A second method to featurize the text is the bag-of-words (BoW) approach. 
+This model enables us to measure the presence of each word throughout all listing descriptions inside the database. 
+In more technical terms, we measure the frequency of each token. 
+A supplementary approach to the two methods indicated above is pre-trained word embeddings or train word embeddings. 
+To contextualize the semantic relationship of terms, word embeddings examine the pairwise correlation between words. 
+Assessing co-occurrences is critical in creating a highly predictive model.
 
 # References {#references .unnumbered}
