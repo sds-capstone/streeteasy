@@ -515,6 +515,25 @@ sale_listings_join_1 %>%
 #property_id == 77131, the smaller id is the more recent one 
 ```
 
+```{r check distribution of size_sqft}
+source("pre-processing.R")
+load_data()
+clean_data()
+
+# Distribution of size_sqft
+
+original <- ggplot(data=sale_listings, aes(x=size_sqft))+
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(sale_listings$size_sqft, na.rm = TRUE), color="black", alpha=0.5)
+
+log <- ggplot(data=sale_listings, aes(x=log(size_sqft)))+
+  geom_density(color = "purple") +
+  geom_vline(xintercept = mean(log(sale_listings$size_sqft), na.rm = TRUE), color="black", alpha=0.5)
+
+library(patchwork)
+original / log
+```
+
 ```{r size_sqft}
 library(mice)
 sale_listings_mice <- sale_listings_join_1 %>%
@@ -524,6 +543,7 @@ sale_listings_mice <- sale_listings_join_1 %>%
   mutate(size_sqft = ifelse(size_sqft < 30, NA, size_sqft))
 
 # Imputation
+# Incorrect and outdated code, check pre-processing script for latest updates
 # Create a predictor matrix
 allVars <- names(sale_listings_mice)
 predictorMatrix <- matrix(0, ncol = length(allVars), nrow = length(allVars))
