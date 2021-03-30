@@ -14,13 +14,33 @@ source("pre-processing.R")
 ```
 
 
-Right now, the pre-processing script only has two functions.
+Right now, the pre-processing script has four functions.
 
 ```{r sourced functions}
-# Use functions to load and clean data
+
 load_data() # creates two dataframes in the global environment
-clean_data()
+
+clean_data() # cleans the data
+
+sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+
+ml_setup(sale_listings_imputed) # splits the input data into test and training sets
 ```
+
+```{r check imputation}
+original <- ggplot(data=sale_listings_imputed, aes(x=size_sqft))+
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(sale_listings$size_sqft, na.rm = TRUE), color="black", alpha=0.5)
+
+log <- ggplot(data=sale_listings_imputed, aes(x=log(size_sqft)))+
+  geom_density(color = "purple") +
+  geom_density(aes(x=log(sale_listings$size_sqft)), color = "pink")+
+  geom_vline(xintercept = mean(log(sale_listings_imputed$size_sqft)), color="black", alpha=0.5)
+
+library(patchwork)
+original / log
+```
+
 
 ## Important: things to keep consistant!
 - Put all 4 data files in a folder called `data`, because the pre-processing script refers to "data/..."
