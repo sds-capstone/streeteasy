@@ -100,4 +100,58 @@ clean_data <- function(){
     filter(!property_id %in% duplicate_id$property_id) %>%
     rbind.data.frame(no_duplicate)
   
+  sale_listings <<- sale_listings %>%
+    filter(!is.na(state))%>%
+    mutate(unittype = as.factor(unittype),
+           is_historic = as.factor(is_historic),
+           major_city = as.factor(major_city),
+           county = as.factor(county),
+           state = as.factor(state))
+}
+
+impute_data <- function(){
+  
+  library(mice)
+  # Create a new data frame for imputation
+  sale_listings_mice <- sale_listings %>%
+    mutate(log_size = log(size_sqft))
+  
+  # Only impute NA values for the log_size column
+  na_matrix <- is.na(sale_listings_mice)
+  na_matrix[,-ncol(sale_listings_mice)] <- FALSE
+    
+  # Create a predictor matrix
+  # Predictors: "unittype", "bedrooms", "bathrooms", "floor_count", "major_city", "state"
+  predictorMatrix <- make.predictorMatrix(sale_listings_mice)
+  predictorMatrix[,c(1, 2, 4, 7:11, 13, 14, 16, 18:20)] <- 0
+  predictorMatrix[1:19,] <- 0
+  
+  # Imputation with mice
+  sale_listings_imp <- mice(sale_listings_mice, m=1, 
+                            method = "norm.predict", 
+                            predictorMatrix = predictorMatrix,
+                            where = na_matrix,
+                            seed = 410)
+  
+  # Fill in the generated values
+  sale_listings_imputed <- complete(sale_listings_imp)
+  
+  # Clean up and un-log the log_size variable
+  sale_listings_imputed <- sale_listings_imputed %>%
+    rename(size_sqft_na = size_sqft) %>%
+    mutate(size_sqft = exp(log_size)) %>%
+    select(-log_size)
+  
+  return(sale_listings_imputed)
+  
+}
+
+ml_setup <- function(data){
+  
+  # For now, split the data into training/test sets
+  train <<- data %>% sample_frac(.70)
+  test <<- data %>% anti_join(train)
+  
+  # Implement 5-fold CV in the future
+  
 }
