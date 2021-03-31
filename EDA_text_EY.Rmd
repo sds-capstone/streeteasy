@@ -424,15 +424,6 @@ duplicate_listing <- sale_listings_join_c %>%
 
 #choose the larger id for same property_id?? 
 #property_id == 77131, the smaller id is the more recent one 
-<<<<<<< HEAD
-
-#count row NA 
-na_row <- as.data.frame(rowSums(is.na(duplicate_listing))) %>%
-  rename("na_row" = "rowSums(is.na(duplicate_listing))")
-
-duplicate_na <- cbind(duplicate_listing, na_row)
-=======
->>>>>>> upstream/main
 
 #count row NA 
 na_row <- as.data.frame(rowSums(is.na(duplicate_listing))) %>%
@@ -455,23 +446,6 @@ length_des <- as.data.frame(nchar(duplicate_listing_2$listing_description)) %>%
 
 duplicate_des <- cbind.data.frame(duplicate_listing_2, length_des)
 
-<<<<<<< HEAD
-#choose listing that has less NA attributes 
-#11,334 listings 
-duplicate_listing_2 <- duplicate_na %>%
-  group_by(property_id) %>%
-  filter(na_row == min(na_row)) 
-
-library(stringr)
-
-length_des <- as.data.frame(nchar(duplicate_listing_2$listing_description)) %>%
-  rename("len_des" = "nchar(duplicate_listing_2$listing_description)") %>%
-  mutate(len_des = as.numeric(len_des))
-
-duplicate_des <- cbind.data.frame(duplicate_listing_2, length_des)
-
-=======
->>>>>>> upstream/main
 #keep the one with longer description
 final_clean <- duplicate_des  %>%
   mutate(len_des = ifelse(is.na(len_des) == TRUE, 0, len_des)) %>%
@@ -481,7 +455,6 @@ final_clean <- duplicate_des  %>%
   arrange(property_id) %>%
   distinct(property_id, .keep_all = TRUE) %>%
   select(-na_row, -len_des)
-<<<<<<< HEAD
 
 sale_listings_join_c %>%
   filter(!property_id %in% duplicate_id$property_id) %>%
@@ -497,23 +470,7 @@ sale_listings_join_1 %>%
 #choose the larger id for same property_id?? 
 #property_id == 77131, the smaller id is the more recent one 
 ```
-=======
 
-sale_listings_join_c %>%
-  filter(!property_id %in% duplicate_id$property_id) %>%
-  rbind.data.frame(final_clean)
->>>>>>> upstream/main
-
-sale_listings_join_c %>%
-  filter(is.na(property_id) == TRUE)
-
-sale_listings_join_1 %>%
-  filter(property_id %in% duplicate_id$property_id) %>%
-  arrange(property_id) 
-
-#choose the larger id for same property_id?? 
-#property_id == 77131, the smaller id is the more recent one 
-```
 
 ```{r check distribution of size_sqft}
 source("pre-processing.R")
