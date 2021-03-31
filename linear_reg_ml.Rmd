@@ -85,7 +85,7 @@ for (j in 1:5) {
   # Fit model on pretend training
   mod1 <- lm(log10price ~ bedrooms + 
              bathrooms +
-             log10size +
+ #            log10size +
             state + 
              floor_count +
              is_historic,
