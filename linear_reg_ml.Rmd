@@ -5,90 +5,91 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(readr)
 library(tidyverse)
 library(tidymodels)
 library(leaps)
+library(MLmetrics)
 ```
+
 
 ```{r message=FALSE, warning=FALSE}
-library(readr)
-sale_listings <- read_csv(here::here("sale_listings.csv"))
-# Create test & training sets (used the same code to split as Yanwan did in null model)
-set.seed(410)
-train <- sale_listings %>% sample_frac(.70)
-test <- sale_listings %>% anti_join(train)
+#use imputed data for linear model 
+source("pre-processing.R")
+load_data() # creates two dataframes in the global environment
+
+clean_data() # cleans the data
+
+sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+
+ml_setup(sale_listings_imputed) 
+
+head(train)
+
+train <- train %>%
+  mutate(log10price = log10(price)) %>%
+  mutate(log10size = log10(size_sqft))
+
+test <- test %>%
+  mutate(log10price = log10(price)) %>%
+  mutate(log10size = log10(size_sqft))
+
 ```
 
-I haven't completely cleaned up the data yet; results might be different after the data is cleaned. 
-
+## Model Fitting
 ```{r}
-# summary(sale_listings)
-train <- sale_listings %>%
-  mutate(addr_state = ifelse(addr_state == "New Jersey", "NJ", ifelse(addr_state == "New York", "NY", addr_state)))
-# log 10 price
-train <- sale_listings %>%
-  mutate(logPrice = log10(price))
-# is it legit to use medians to fill in when the rate of missing data is very large? (i.e., over10k)
-# I thought this is what Yipeng said to do, so I don't see why not?! -Emma
-```
-
-It suddenly came to me that we could probably use LASSO if we eventually populate many vars     Aha! I remember LASSO. Good call. -Emma
-
-```{r}
-# select best subset from not-carefully-chosen vars
-# I vaguely remember there should be some difference between backforward vs forward vs stepwise selection but can't recall the details
-# be cautious that some vars I throw in here have a lot of missing values/ skewed values
-# !!!bad practice: using na.omit so that best subsets can be identified -- again will revisit this after data is cleaned
-# filter out size_sqft = 0
-train_complt <- train %>%
-  select(bedrooms, addr_state, price, bathrooms, anyrooms, size_sqft, time_to_subway, floor_count, year_built, logPrice, is_historic) %>%
-  na.omit() %>%
-  filter(size_sqft != 0)
-train_complt <- train_complt %>%
-  mutate(logSize_sqft = log10(size_sqft)) %>%
-  mutate(is_historic = as.factor(is_historic))
-# note: I used stepwise here; results are different if use backward/forward selection
-model.seq <- regsubsets(logPrice ~ bedrooms + 
+#major city has 66 levels, zipcode has over 200, county has 12
+#not sure how to deal with categorical var 
+model.seq <- regsubsets(log10price ~ bedrooms +
                           bathrooms + 
-                          anyrooms + 
-                          logSize_sqft + 
-                          time_to_subway + 
-                          floor_count + 
-                          year_built + 
-                          addr_state,
-                        data = train_complt,
-                        nvmax = 5,
+                          log10size +
+                          floor_count +
+                          size_sqft + 
+                          year_built +
+                          is_historic +
+   #                       county + 
+                          state,
+                        data = train,
+                        nvmax = 8,
                         method = "seqrep"
 )
-# select logSize_sqft, bedrooms, bathrooms, time_to_subway, floor_count
+# 6-predictor model seems to perform the best: bathrooms, log10size, floor_count, size_sqft, is_historic, state
+# think it makes sense to add bedrooms and delete size_sqft since we already have log10size
 with(summary(model.seq), data.frame(rsq, adjr2, rss, cp, outmat))
-mod1 <- lm(logPrice ~ bedrooms + bathrooms +
-             logSize_sqft +
-             addr_state + floor_count,
-           data = train_complt
+mod1 <- lm(log10price ~ bedrooms + 
+             bathrooms +
+             log10size +
+            state + 
+             floor_count +
+             is_historic,
+           data = train
 )
-# because the vars are soooo skewed, the coefficients look very wired
+# why n. bedrooms have negative relationship with price??? 
 summary(mod1)
 ```
 
+## Cross Validation 
 ```{r}
 # stole code from Albert's class
 # 5-fold cross-validation
-train_complt <- train_complt %>%
+train <- train %>%
   sample_frac(1) %>%
   mutate(fold = rep(1:5, length = n())) %>%
   arrange(fold)
 RMLSE <- rep(0, 5)
 for (j in 1:5) {
-  pretend_training <- train_complt %>%
+  pretend_training <- train %>%
     filter(fold != j)
-  pretend_test <- train_complt %>%
+  pretend_test <- train %>%
     filter(fold == j)
   # Fit model on pretend training
-  mod1 <- lm(logPrice ~ bedrooms + bathrooms +
-               logSize_sqft +
-               addr_state + floor_count,
-  data = train_complt
+  mod1 <- lm(log10price ~ bedrooms + 
+             bathrooms +
+             log10size +
+            state + 
+             floor_count +
+             is_historic,
+           data = train
   )
   # Making prediction using broom()
   Model_prediction <- mod1 %>%
@@ -96,25 +97,38 @@ for (j in 1:5) {
     mutate(.fitted = 10^.fitted)
   pretend_test <- pretend_test %>%
     mutate(price_hat = Model_prediction$.fitted)
-  RMLSE[j] <- pretend_test %>%
-    mutate(
-      residual = log(price + 1) - log(price_hat + 1),
+ RMLSE[j] <- pretend_test %>%
+   mutate(
+     residual = log(price + 1) - log(price_hat + 1),
       residual_sq = residual^2
     ) %>%
     summarize(
-      MLSE = mean(residual_sq),
+      MLSE = mean(residual_sq, na.rm = TRUE),
       RMLSE = sqrt(MLSE)
     ) %>%
     pull(RMLSE)
+#don't know why i can't store subsets of RMSLE using the function 
+#  RMSLE[j] <- RMSLE(pretend_test$price_hat, pretend_test$price) 
 }
 rmlse <- mean(RMLSE)
 rmlse
-# rmlse = .569
-# could fit the model back to test set; did not do so here
-# could use function rmlse()
+# rmlse = .5241
 ```
 
+## Making Prediction on Test
+```{r}
+Model_prediction <- mod1 %>%
+  broom::augment(newdata=test) %>%
+  mutate(.fitted = 10^.fitted)
 
+
+test <- test %>%
+  mutate(SalePrice_hat = Model_prediction$.fitted)
+
+rmsle_lm <- RMSLE(test$SalePrice_hat, test$price)
+rmsle_lm
+#rmsle = .5191
+```
 
 
 

@@ -147,7 +147,8 @@ impute_data <- function(){
 }
 
 ml_setup <- function(data){
-  
+  #set seed for spliting train/test
+  set.seed(410)
   # For now, split the data into training/test sets
   train <<- data %>% sample_frac(.70)
   test <<- data %>% anti_join(train)
