@@ -42,7 +42,8 @@ original / log
 ```
 
 
-## Important: things to keep consistant!
+## Important: things to keep consistent!
+
 - Put all 4 data files in a folder called `data`, because the pre-processing script refers to "data/..."
 - `sale-listings`: the variable name for sale-listings
 - `amenities`: the variable name for amenities, although we're not using it for now

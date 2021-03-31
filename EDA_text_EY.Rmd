@@ -471,6 +471,7 @@ sale_listings_join_1 %>%
 #property_id == 77131, the smaller id is the more recent one 
 ```
 
+
 ```{r check distribution of size_sqft}
 source("pre-processing.R")
 load_data()
