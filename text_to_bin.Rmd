@@ -1,0 +1,28 @@
+---
+title: "text variable to binary variables"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(stringr)
+source("pre-processing.R")
+```
+
+```{r loading data and sourcing functions}
+load_data() # creates two dataframes in the global environment
+
+clean_data() # cleans the data
+
+sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+
+ml_setup(sale_listings_imputed) # splits the input data into test and training sets
+```
+
+
+```{rcreating binary variables from text}
+sale_listings_ss <- sale_listings %>%
+  mutate(stainless_steel = as.integer(str_detect(listing_description, "[A-Za-z]tainless.[A-Za-z]teel")),
+         hw_floors = as.integer(str_detect(listing_description, "[A-Za-z]ardwood.[A-Za-z]loors?")))
+```
+
