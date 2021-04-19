@@ -1,9 +1,5 @@
----
-<<<<<<< HEAD
-title: Predicting Real Estate Prices Using Text-Based Analysis and Machine Learning Algorithms
-=======
-title: Predicting Real Estate Prices Using Natural Language Processing and Machine Learning Algorithms
->>>>>>> upstream/main
+title: Predicting Real Estate Prices in New York City Using Natural Language Processing and Machine Learning Algorithms
+
 author:
   - name: Yipeng Lai
     email: yipengl@zillowgroup.com
