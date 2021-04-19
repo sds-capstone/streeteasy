@@ -19,10 +19,37 @@ sale_listings_imputed <- impute_data() # imputes size values and returns a new d
 ml_setup(sale_listings_imputed) # splits the input data into test and training sets
 ```
 
-
-```{rcreating binary variables from text}
+```{r creating binary variables from text}
 sale_listings_ss <- sale_listings %>%
-  mutate(stainless_steel = as.integer(str_detect(listing_description, "[A-Za-z]tainless.[A-Za-z]teel")),
-         hw_floors = as.integer(str_detect(listing_description, "[A-Za-z]ardwood.[A-Za-z]loors?")))
+  mutate(
+    stainless_steel = as.integer(str_detect(listing_description, "[A-Za-z]tainless.[A-Za-z]teel")),
+    hw_floors = as.integer(str_detect(listing_description, "[A-Za-z]ardwood.[A-Za-z]loors?")),
+    wd = as.integer(str_detect(listing_description, c("wd", 
+                                                      "w/d", 
+                                                      "w&d", 
+                                                      "w & d", 
+                                                      "washer/dryer", 
+                                                      "washer / dryer", 
+                                                      "washer and dryer", 
+                                                      "washer&dryer", 
+                                                      "washer & dryer", 
+                                                      "washer-dryer", 
+                                                      "washer dryer"))), 
+    steel_app = as.integer(str_detect(listing_description, "[A-Za-z]teel.[A-Za-z]ppliances?")),
+    fitness = as.integer(str_detect(listing_description, c("fitness", 
+                                                      "fitness center", 
+                                                      "fitness-center"))),  
+    renovate = as.integer(str_detect(listing_description, "[A-Za-z]enovat*")),
+    closet_space = as.integer(str_detect(listing_description, "[A-Za-z]loset.[A-Za-z]pace")), 
+    spacious = as.integer(str_detect(listing_description, "[A-Za-z]pacious*")),
+    storage = as.integer(str_detect(listing_description, "[A-Za-z]torage")), 
+    roof_deck = as.integer(str_detect(listing_description, "[A-Za-z]oof.[A-Za-z]eck")),
+    park = as.integer(str_detect(listing_description, "[A-Za-z]ark")), 
+    park = as.integer(str_detect(listing_description, "[A-Za-z]ark")),
+    view = as.integer(str_detect(listing_description, "[A-Za-z]iew*")), 
+    window = as.integer(str_detect(listing_description, "[A-Za-z]indow*")),
+    natural_light = as.integer(str_detect(listing_description, "[A-Za-z]atural.[A-Za-z]ight")),
+    
+  )
 ```
 
