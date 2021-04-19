@@ -45,3 +45,9 @@ vignettes/*.pdf
 # StreetEasy data
 *.csv
 
+# Knitted PDF file
+*.tex
+*.pdf
+
+
+

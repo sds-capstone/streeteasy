@@ -50,7 +50,6 @@ sale_listings_ss <- sale_listings %>%
     view = as.integer(str_detect(listing_description, "[A-Za-z]iew*")), 
     window = as.integer(str_detect(listing_description, "[A-Za-z]indow*")),
     natural_light = as.integer(str_detect(listing_description, "[A-Za-z]atural.[A-Za-z]ight"))
-    
   )
 ```
 

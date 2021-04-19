@@ -1,0 +1,59 @@
+---
+title: "main"
+author: "Yanwan Zhu"
+date: "3/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+# Use the pre-processing script
+source("pre-processing.R")
+```
+
+
+Right now, the pre-processing script has four functions.
+
+```{r sourced functions}
+
+load_data() # creates two dataframes in the global environment
+
+clean_data() # cleans the data
+
+sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+
+ml_setup(sale_listings_imputed) # splits the input data into test and training sets
+```
+
+```{r check imputation}
+original <- ggplot(data=sale_listings_imputed, aes(x=size_sqft))+
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(sale_listings$size_sqft, na.rm = TRUE), color="black", alpha=0.5)
+
+log <- ggplot(data=sale_listings_imputed, aes(x=log(size_sqft)))+
+  geom_density(color = "purple") +
+  geom_density(aes(x=log(sale_listings$size_sqft)), color = "pink")+
+  geom_vline(xintercept = mean(log(sale_listings_imputed$size_sqft)), color="black", alpha=0.5)
+
+library(patchwork)
+original / log
+```
+
+
+## Important: things to keep consistant!
+- Put all 4 data files in a folder called `data`, because the pre-processing script refers to "data/..."
+- `sale-listings`: the variable name for sale-listings
+- `amenities`: the variable name for amenities, although we're not using it for now
+
+## Exploratory Data Analysis
+- `EDA_text_EY.Rmd`: EDA, data cleaning, bigram visualization
+
+## Models
+
+- `null_naive_ml.R`: null model using the mean price 
+- `linear_reg_ml.Rmd`: linear regression models
+- `decision_tree_analysis.Rmd`: decision tree and random forest models
+
+
