@@ -85,7 +85,7 @@ for (j in 1:5) {
   # Fit model on pretend training
   mod1 <- lm(log10price ~ bedrooms + 
              bathrooms +
- #            log10size +
+             log10size +
             state + 
              floor_count +
              is_historic,
@@ -127,7 +127,11 @@ test <- test %>%
 
 rmsle_lm <- RMSLE(test$SalePrice_hat, test$price)
 rmsle_lm
-#rmsle = .5191
+MLmetrics::RMSE(test$SalePrice_hat, test$price)
+#rmsle = .5191448
+#rmse = 735443.8
+#Null model RMSLE: .7345286
+#null model RMSLE: 916221.5
 ```
 
 
