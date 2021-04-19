@@ -45,10 +45,11 @@ sale_listings_ss <- sale_listings %>%
     storage = as.integer(str_detect(listing_description, "[A-Za-z]torage")), 
     roof_deck = as.integer(str_detect(listing_description, "[A-Za-z]oof.[A-Za-z]eck")),
     park = as.integer(str_detect(listing_description, "[A-Za-z]ark")), 
-    park = as.integer(str_detect(listing_description, "[A-Za-z]ark")),
+    balcony = as.integer(str_detect(listing_description, "[A-Za-z]alcony")),
+    courtyard = as.integer(str_detect(listing_description, "[A-Za-z]ourtyard")),
     view = as.integer(str_detect(listing_description, "[A-Za-z]iew*")), 
     window = as.integer(str_detect(listing_description, "[A-Za-z]indow*")),
-    natural_light = as.integer(str_detect(listing_description, "[A-Za-z]atural.[A-Za-z]ight")),
+    natural_light = as.integer(str_detect(listing_description, "[A-Za-z]atural.[A-Za-z]ight"))
     
   )
 ```
