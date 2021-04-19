@@ -50,7 +50,7 @@ StreetEasy’s existing predictive tool uses metrics on bedrooms, bathrooms, pro
 One feature the current machine learning algorithm neglects is the descriptive text of given listings.
 A primary objective of this project is to convert text-based listing descriptions into input variables for the purpose of improving predictive model accuracy.
 In particular, we want to research whether listing descriptions can be utilized to create meaningful features to improve the accuracy of predicting home prices.
-<<<<<<< HEAD
+
 Past literature supports leveraging machine learning algorithms with natural language processing to improve prediction accuracy @chen2018integrating [@ivanov2020improving].
 
 ## Research Questions and Objectives
@@ -131,7 +131,6 @@ Different ways for featurizing text data:
 - Use bag-of-words method by counting the frequency of words observed in each document
 - Use pre-trained word embeddings or train word embeddings
 
-=======
 Current literature supports leveraging machine learning algorithms with natural language processing to improve prediction accuracy @chen2018integrating [@ivanov2020improving].
 
 ## Research Questions and Objectives
@@ -246,6 +245,5 @@ In more technical terms, we measure the frequency of each token.
 A supplementary approach to the two methods indicated above is pre-trained word embeddings or train word embeddings. 
 To contextualize the semantic relationship of terms, word embeddings examine the pairwise correlation between words. 
 Assessing co-occurrences is critical in creating a highly predictive model.
->>>>>>> upstream/main
 
 # References {#references .unnumbered}
