@@ -47,6 +47,7 @@ sale_listings_ss <- sale_listings %>%
     closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
     spacious = as.integer(str_detect(listing_description, "[Ss]pacious*")),
     storage = as.integer(str_detect(listing_description, "[Ss]torage")),
+    closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
     roof_deck = as.integer(str_detect(listing_description, "[Rr]oof.[Dd]eck")),
     park = as.integer(str_detect(listing_description, "[Pp]ark")),
     balcony = as.integer(str_detect(listing_description, "[Bb]alcony")),
@@ -54,7 +55,11 @@ sale_listings_ss <- sale_listings %>%
     view = as.integer(str_detect(listing_description, "[Vv]iew*")),
     window = as.integer(str_detect(listing_description, "[Ww]indow*")),
     natural_light = as.integer(str_detect(listing_description, "[Nn]atural.[Ll]ight")),
-    outdoor_space = ifelse((park | balcony | courtyard) == 1, 1, 0)
+    en_suite = as.integer(str_detect(listing_description, "[Ee]n.[Ss]uite")),
+    pet_friendly = as.integer(str_detect(listing_description, "[Pp]et.[Ff]riendly")),
+    tree_lined = as.integer(str_detect(listing_description, "[Tt]ree.[Ll]ined")),
+    central_park = as.integer(str_detect(listing_description, "[Cc]entral.[Pp]ark")),
+    outdoor_space = as.integer(ifelse((park | balcony | courtyard | roof_deck | central_park | tree_lined) == 1, 1, 0))                              
   )
 ```
 
