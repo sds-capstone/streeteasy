@@ -22,37 +22,39 @@ ml_setup(sale_listings_imputed) # splits the input data into test and training s
 ```{r creating binary variables from text}
 sale_listings_ss <- sale_listings %>%
   mutate(
-    stainless_steel = as.integer(str_detect(listing_description, "[A-Za-z]tainless.[A-Za-z]teel")),
-    hw_floors = as.integer(str_detect(listing_description, "[A-Za-z]ardwood.[A-Za-z]loors?")),
-    wd = as.integer(str_detect(listing_description, c("[Ww]d", 
-                                                      "[Ww]/d", 
-                                                      "[Ww]&d", 
-                                                      "[Ww] & d", 
-                                                      "[Ww]asher/dryer", 
-                                                      "[Ww]asher / dryer", 
-                                                      "[Ww]asher and dryer", 
-                                                      "[Ww]asher&dryer", 
-                                                      "[Ww]asher & dryer", 
-                                                      "[Ww]asher-dryer", 
-                                                      "[Ww]asher dryer"))), 
-    steel_app = as.integer(str_detect(listing_description, "[A-Za-z]teel.[A-Za-z]ppliances?")),
-    fitness = as.integer(str_detect(listing_description, c("fitness", 
-                                                      "fitness center", 
-                                                      "fitness-center"))),  
-    renovate = as.integer(str_detect(listing_description, "[A-Za-z]enovat*")),
-    closet_space = as.integer(str_detect(listing_description, "[A-Za-z]loset.[A-Za-z]pace")), 
-    spacious = as.integer(str_detect(listing_description, "[A-Za-z]pacious*")),
-    storage = as.integer(str_detect(listing_description, "[A-Za-z]torage")), 
-    roof_deck = as.integer(str_detect(listing_description, "[A-Za-z]oof.[A-Za-z]eck")),
-    park = as.integer(str_detect(listing_description, "[A-Za-z]ark")), 
-    balcony = as.integer(str_detect(listing_description, "[A-Za-z]alcony")),
-    courtyard = as.integer(str_detect(listing_description, "[A-Za-z]ourtyard")),
-    view = as.integer(str_detect(listing_description, "[A-Za-z]iew*")), 
-    window = as.integer(str_detect(listing_description, "[A-Za-z]indow*")),
-    natural_light = as.integer(str_detect(listing_description, "[A-Za-z]atural.[A-Za-z]ight")),
+    stainless_steel = as.integer(str_detect(listing_description, "[Ss]tainless.[Ss]teel")),
+    hw_floors = as.integer(str_detect(listing_description, "[Hh]ardwood.[Ff]loors?")),
+    wd = as.integer(str_detect(listing_description, c(
+      "[Ww]d",
+      "[Ww]/d",
+      "[Ww]&d",
+      "[Ww] & d",
+      "[Ww]asher/dryer",
+      "[Ww]asher / dryer",
+      "[Ww]asher and dryer",
+      "[Ww]asher&dryer",
+      "[Ww]asher & dryer",
+      "[Ww]asher-dryer",
+      "[Ww]asher dryer"
+    ))),
+    steel_app = as.integer(str_detect(listing_description, "[Ss]teel.[Aa]ppliances?")),
+    fitness = as.integer(str_detect(listing_description, c(
+      "[Ff]itness",
+      "[Ff]itness center",
+      "[Ff]itness-center"
+    ))),
+    renovate = as.integer(str_detect(listing_description, "[Rr]enovat*")),
+    closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
+    spacious = as.integer(str_detect(listing_description, "[Ss]pacious*")),
+    storage = as.integer(str_detect(listing_description, "[Ss]torage")),
+    roof_deck = as.integer(str_detect(listing_description, "[Rr]oof.[Dd]eck")),
     park = as.integer(str_detect(listing_description, "[Pp]ark")),
     balcony = as.integer(str_detect(listing_description, "[Bb]alcony")),
-    outdoor_space = ifelse((park | balcony) == 1, 1, 0)
+    courtyard = as.integer(str_detect(listing_description, "[Cc]ourtyard")),
+    view = as.integer(str_detect(listing_description, "[Vv]iew*")),
+    window = as.integer(str_detect(listing_description, "[Ww]indow*")),
+    natural_light = as.integer(str_detect(listing_description, "[Nn]atural.[Ll]ight")),
+    outdoor_space = ifelse((park | balcony | courtyard) == 1, 1, 0)
   )
 ```
 
