@@ -142,6 +142,25 @@ impute_data <- function(){
     mutate(size_sqft = exp(log_size)) %>%
     select(-log_size)
   
+  #group unittype and cities to create less levels 
+  sale_listings_imputed <- sale_listings_imputed %>%
+    mutate(unit_group = ifelse(unittype %in% c("B", "M", "Z"), 1, 
+                                ifelse(unittype %in% c("H", "T"), 2, 
+                                       ifelse(unittype %in% c("A", "C", "R", "P", "Y"), 3, 
+                                              ifelse(unittype %in% c("D", "F", "N"), 4,
+                                                     ifelse(unittype %in% c("X", "U", "?"), 5, unittype)))))) %>%
+    mutate(unit_group = as.factor(unit_group))
+  
+  sale_listings_imputed <- sale_listings_imputed %>%
+    mutate(city_group = ifelse(major_city == "Long Island City", 1, 
+                               ifelse(major_city == "New York", 2, 
+                                      ifelse(major_city %in% c("Astoria", "Brooklyn",
+                                                               "Hoboken", "Toms River",
+                                                               "Flushing", "Edgewater",
+                                                               "Elmhurst", "Sunnyside"), 3,
+                                             4)))) %>%
+    mutate(city_group = as.factor(city_group))
+  
   return(sale_listings_imputed)
   
 }

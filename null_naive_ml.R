@@ -32,3 +32,4 @@ test_log10 <- test_log10 %>%
 # Compute RMSLE
 rmsle_hat_null <- RMSLE(test_log10$price_hat, test_log10$price)
 rmsle_hat_null
+

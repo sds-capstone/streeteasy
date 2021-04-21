@@ -21,6 +21,7 @@ ml_setup(sale_listings_imputed) # splits the input data into test and training s
 
 ```{r creating binary variables from text}
 sale_listings_ss <- sale_listings %>%
+   mutate(listing_description = ifelse(is.na(listing_description) == TRUE, 0, listing_description)) %>%
   mutate(
     stainless_steel = as.integer(str_detect(listing_description, "[Ss]tainless.[Ss]teel")),
     hw_floors = as.integer(str_detect(listing_description, "[Hh]ardwood.[Ff]loors?")),
