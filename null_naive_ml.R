@@ -33,4 +33,4 @@ test_log10 <- test_log10 %>%
 rmsle_hat_null <- MLmetrics::RMSLE(test_log10$price_hat, test_log10$price)
 rmse_hat_null <- MLmetrics::RMSE(test_log10$price_hat, test_log10$price)
 rmsle_hat_null
-rmse_hat_null
+

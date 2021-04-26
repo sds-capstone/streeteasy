@@ -1,0 +1,66 @@
+---
+title: "text variable to binary variables"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(stringr)
+source("pre-processing.R")
+```
+
+```{r loading data and sourcing functions}
+load_data() # creates two dataframes in the global environment
+
+clean_data() # cleans the data
+
+sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+
+ml_setup(sale_listings_imputed) # splits the input data into test and training sets
+```
+
+```{r creating binary variables from text}
+sale_listings_ss <- sale_listings %>%
+   mutate(listing_description = ifelse(is.na(listing_description) == TRUE, 0, listing_description)) %>%
+  mutate(
+    stainless_steel = as.integer(str_detect(listing_description, "[Ss]tainless.[Ss]teel")),
+    hw_floors = as.integer(str_detect(listing_description, "[Hh]ardwood.[Ff]loors?")),
+    wd = as.integer(str_detect(listing_description, c(
+      "[Ww]d",
+      "[Ww]/d",
+      "[Ww]&d",
+      "[Ww] & d",
+      "[Ww]asher/dryer",
+      "[Ww]asher / dryer",
+      "[Ww]asher and dryer",
+      "[Ww]asher&dryer",
+      "[Ww]asher & dryer",
+      "[Ww]asher-dryer",
+      "[Ww]asher dryer"
+    ))),
+    steel_app = as.integer(str_detect(listing_description, "[Ss]teel.[Aa]ppliances?")),
+    fitness = as.integer(str_detect(listing_description, c(
+      "[Ff]itness",
+      "[Ff]itness center",
+      "[Ff]itness-center"
+    ))),
+    renovate = as.integer(str_detect(listing_description, "[Rr]enovat*")),
+    closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
+    spacious = as.integer(str_detect(listing_description, "[Ss]pacious*")),
+    storage = as.integer(str_detect(listing_description, "[Ss]torage")),
+    closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
+    roof_deck = as.integer(str_detect(listing_description, "[Rr]oof.[Dd]eck")),
+    park = as.integer(str_detect(listing_description, "[Pp]ark")),
+    balcony = as.integer(str_detect(listing_description, "[Bb]alcony")),
+    courtyard = as.integer(str_detect(listing_description, "[Cc]ourtyard")),
+    view = as.integer(str_detect(listing_description, "[Vv]iew*")),
+    window = as.integer(str_detect(listing_description, "[Ww]indow*")),
+    natural_light = as.integer(str_detect(listing_description, "[Nn]atural.[Ll]ight")),
+    en_suite = as.integer(str_detect(listing_description, "[Ee]n.[Ss]uite")),
+    pet_friendly = as.integer(str_detect(listing_description, "[Pp]et.[Ff]riendly")),
+    tree_lined = as.integer(str_detect(listing_description, "[Tt]ree.[Ll]ined")),
+    central_park = as.integer(str_detect(listing_description, "[Cc]entral.[Pp]ark")),
+    outdoor_space = as.integer(ifelse((park | balcony | courtyard | roof_deck | central_park | tree_lined) == 1, 1, 0))                              
+  )
+```
+

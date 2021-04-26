@@ -1,0 +1,132 @@
+---
+title: "explor_text_analysis_EY"
+output: html_document
+---
+Popular R packages: tidytext, stringr, quanteda, spacyr
+
+Different ways for featurizing text data:
+- Define a target feature/tag such as “whether the apartment has been recently renovated” and infer the value from text using regular expressions or models
+- Use bag-of-words method by counting the frequency of words observed in each document
+- Use pre-trained word embeddings or train word embeddings
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(tidytext)
+library(janitor)
+library(SnowballC)
+```
+
+## Redo bigrams with cleaned data, April 12, 2021
+```{r message=FALSE, warning=FALSE}
+source("pre-processing.R")
+load_data() 
+clean_data()
+sale_listings_imputed <- impute_data()
+```
+
+### Single Word Counts 
+```{r fig.height=4, fig.width=6}
+sale_text <- sale_listings_imputed %>%
+  select(property_id, listing_description)
+
+text <- tibble(txt = sale_text$listing_description)
+
+sale_text_tk <- text %>%
+  unnest_tokens(word, txt) %>%
+  anti_join(stop_words) 
+
+sale_tk_count <- sale_text_tk %>%
+   count(word, sort = TRUE) %>%
+  arrange(desc(n))
+
+uni_freq <- sale_tk_count %>%
+  head(50) %>%
+  ggplot(aes(y=reorder(word,n), x = n)) + 
+  geom_bar(stat = "identity")
+
+#stemming 
+sale_tk_stem <- text %>%
+  unnest_tokens(word, txt) %>%
+  anti_join(stop_words) %>%
+  mutate(stem = wordStem(word)) 
+
+sale_tk_stem_count <- sale_tk_stem %>%
+  count(stem, sort = TRUE) %>%
+  arrange(desc(n))
+
+uni_stem_freq <- sale_tk_stem_count %>%
+  head(50) %>%
+  ggplot(aes(y=reorder(stem,n), x = n)) + 
+  geom_bar(stat = "identity")
+```
+
+### Bigram Counts 
+```{r fig.height=4, fig.width=6}
+sale_bigram <- text %>%
+  unnest_tokens(bigram, txt, token = 'ngrams', n=2) %>% 
+  separate(bigram, c('word1', 'word2'), sep = " ") %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  unite(bigram, word1, word2, sep = " ") 
+
+sale_bi_count <- sale_bigram %>%
+  count(bigram, sort = TRUE) %>%
+  arrange(desc(n))
+
+bi_freq <- sale_bi_count %>%
+  head(50) %>%
+  ggplot(aes(y=reorder(bigram,n), x = n)) + 
+  geom_bar(stat = "identity")
+bi_freq
+```
+
+```{r}
+#very raw attempts on linear regression model 
+renov_listing <- sale_listings_imputed %>%
+  filter(str_detect(listing_description, "renovat*")) %>%
+  select(id)
+
+sale_listings_imputed$listing_description <- tolower(sale_listings_imputed$listing_description)
+
+ss_listing <- sale_listings_imputed %>%
+  filter(str_detect(listing_description, "stainless steel")) %>%
+  select(id)
+
+#text %>%
+#  filter(str_detect(txt, "stainless steel"))
+
+sale_listings_tf <- sale_listings_imputed %>%
+  mutate(stainless = ifelse(id %in% c(ss_listing$id), 1, 0))
+
+#renovate is not a significant feature in linear regression model 
+#rmlse = .52408
+
+#stainless steel - significant; rmlse = .5232
+```
+```{r}
+#tf-idf 
+#may not use this 
+listing_words_tfidf <- sale_text %>%
+  unnest_tokens(word, listing_description) %>%
+  anti_join(get_stopwords(), by = "word")  %>%
+  count(property_id, word) %>%
+  bind_tf_idf(word, property_id, n) 
+
+listing_words_dfm <- listing_words_tfidf %>%
+  cast_dfm(property_id, word, tf_idf)
+
+listing_words%>%
+  head(100)
+
+#does it even make sense to use tf_idf??? 
+listing_words_tfidf %>%
+  filter(str_detect(word, "renovat*"))
+```
+tf_idf would be useful as a search engine but it is not clear how useful it would be to know how many times "renovat*" appear in this document relative to other documents 
+
+
+
+
+
