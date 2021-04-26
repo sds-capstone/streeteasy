@@ -487,9 +487,104 @@ log <- ggplot(data=sale_listings, aes(x=log(size_sqft)))+
   geom_density(color = "purple") +
   geom_vline(xintercept = mean(log(sale_listings$size_sqft), na.rm = TRUE), color="black", alpha=0.5)
 
-library(patchwork)
-original / log
 ```
+
+```{r check unit types}
+residential <- sale_listings_imputed %>%
+  filter(unittype %in% c("D", "P", "T", "L", "N", "H", "M", "E", "F"))
+non_residential <- sale_listings_imputed %>%
+  anti_join(residential)
+ggplot(residential, aes(x=log10(price), color=unittype))+
+  geom_density()+
+  labs(title="Residential log10 price")
+ggplot(non_residential, aes(log10(price), color=unittype))+
+  geom_density()+
+  labs(title="Non-esidential log10 price")
+ggplot(residential, aes(x=bedrooms, y=log10(price)))+
+  geom_jitter()+
+  geom_smooth(method = "lm")+
+  facet_wrap(~unittype)
+
+bedroom_0 <- sale_listings_imputed %>%
+  filter(bedrooms == 0)
+bedroom_more <- sale_listings_imputed %>%
+  anti_join(bedroom_0)
+```
+
+```{r k means clustering}
+sale_listings_imputed <- impute_data()
+
+sale_listings_imputed <- sale_listings_imputed %>%
+  mutate(log10_size_sqft = log10(size_sqft),
+         log10_price = log10(price))
+
+no_NA_kmeans <- sale_listings_imputed %>%
+  select(bedrooms, log10_size_sqft, log10_price) %>%
+  na.omit()
+
+wssplot <- function(data, nc=15, seed=123){
+               wss <- (nrow(data)-1)*sum(apply(data,2,var))
+               for (i in 2:nc){
+                    set.seed(seed)
+                    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+                plot(1:nc, wss, type="b", xlab="Number of groups",
+                     ylab="Sum of squares within a group")}
+
+wssplot(no_NA_kmeans, nc = 20)
+
+set.seed(410)
+k1 <- kmeans(no_NA_kmeans, centers = 5, nstart = 4 ,iter.max = 100)
+
+table(k1$cluster)
+table(sale_listings_imputed$unittype, k1$cluster)
+table(sale_listings_imputed$county, k1$cluster)
+aggregate(sale_listings_imputed%>%select(size_sqft, price, bedrooms), list(k1$cluster), mean)
+```
+
+Group 1: B (Building), M (Multifamily), Z(Auction)
+Group 2: H (House),T (Townhouse), 
+Group 3: A (Land), C (Commercial), R (Rental), P (Coop), Y-fractional 
+Group 4: D (Condo), F (Apt), N (CondoP)
+Group 5: X (anyhouse), U (unclassified), ? (Unknown)
+
+Not included: E(Mobile home), S(Estate), L(Loft)
+
+```{r plotting clustering results}
+ggplot(sale_listings_imputed, aes(x=log10_size_sqft, y=log10_price, color = as.factor(k1$cluster)))+
+  geom_point(alpha=0.5)
+
+sale_listings_imputed %>%
+  group_by(unittype, k1$cluster) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+ggplot(sale_listings_imputed, aes(x=log10_size_sqft, y=log10_price, color = as.factor(k1$cluster)))+
+  geom_point(alpha=0.5)+
+  facet_wrap(~county)+
+  scale_color_viridis_d()
+
+sale_listings_imputed$cluster <- factor(k1$cluster)
+
+
+aggregate(sale_listings_imputed$size_sqft, list(sale_listings_imputed$bedrooms), mean)
+
+aggregate(sale_listings_imputed%>%select(size_sqft, price, bedrooms) %>%mutate(price_sqft = price/size_sqft), list(sale_listings_imputed$major_city),  median) %>% arrange(desc(price_sqft))
+
+aggregate(sale_listings_imputed$price, list(sale_listings_imputed$county), median) %>%arrange(desc(x))
+```
+Group cities (based on mean and median of price per sqft):
+Group 1: Long Island City
+Group 2: New York
+Group 3: Astoria, Brooklyn, Hoboken, Toms River, Flushing, Edgewater, Elmhurst, Sunnyside
+Group 4: All other
+
+
+
+Group counties:
+Tier 1 - New York
+Iter 2- Kings, Queens, Ocean
+Tier 3 - Hudson, Monmouth, Bergen, Nassau 
+Tier 4 - Richmond, Bronx,  Union, Essex
 
 ```{r size_sqft}
 library(mice)
