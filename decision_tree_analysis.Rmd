@@ -4,12 +4,15 @@ output: html_document
 ---
 
 ```{r loading packages}
-library(dplyr)
+library(tidyverse)
 library(tidymodels)
 library(rattle)
 library(rpart)
 library(randomForest)
 library(MLmetrics)
+library(textdata)
+library(tidytext)
+library(SnowballC)
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -20,7 +23,9 @@ load_data() # creates two dataframes in the global environment
 clean_data() # cleans the data
 
 sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+```
 
+```{r}
 ml_setup(sale_listings_imputed) 
 
 #+1, -1 are supposed to optimize rmlse, but it seems like the result is the same at this point 
@@ -110,7 +115,25 @@ sale_listings_ss <- sale_listings_imputed %>%
     outdoor_space = as.integer(ifelse((park | balcony | courtyard | roof_deck | central_park | tree_lined) == 1, 1, 0))                              
   )
 ```
+Emma's sentiment analysis on sale_listings data frame:
+```{r load afinn sentiment lexicon, cache = TRUE}
+afinn_lex <- get_sentiments("afinn")
+```
 
+```{r data frame sentiment analysis}
+sentiments <- sale_listings %>% 
+  select(id, listing_description) %>% # Preserve property_id for future use
+  unnest_tokens(output = word,
+                input = listing_description) %>% # One row per word in listing_description
+  anti_join(stop_words) %>% # Removes stop words
+  inner_join(afinn_lex) # Scores sentiments on a -5 to +5 scale
+  
+sentiment_summary <- sentiments %>% 
+  group_by(id) %>% 
+  summarise(score = sum(value)) # Shrink df back to one row per listing via total score
+
+sentiments_join <- left_join(sale_listings_ss, sentiment_summary, by = "id") # Rejoined w/ imputed dataset
+```
 
 This is old decision tree analysis:
 
@@ -231,6 +254,21 @@ RMSE(y_pred = price_prediction_rf2, y_true = test2$price)
 # MAPE 0.2919856
 # RMSE 408841
 ```
+
+```{r adding sentiment scores to model}
+train3 <- sentiments_join %>% sample_frac(.70)
+test3 <- sentiments_join %>% anti_join(train3)
+
+tree_sentiments = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, method = "anova", control = rpart.control(cp = 0.005))
+fancyRpartPlot(tree_sentiments)
+
+sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
+
+price_prediction_rf3 <- predict(sale_listings_rf3, test3, type = "response")
+varImpPlot(sale_listings_rf3)
+
+price_prediction_rf3 <- as.data.frame(price_prediction_rf3)
+price_prediction_rf3 <- as.integer(price_prediction_rf3$price_prediction_rf3)
+MAPE(y_pred = price_prediction_rf3, y_true = test3$price)
+RMSE(y_pred = price_prediction_rf3, y_true = test3$price)
 ```
-
-
