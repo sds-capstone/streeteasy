@@ -7,9 +7,6 @@ output: html_document
 library(tidyverse)
 library(textdata)
 library(tidytext)
-library(dplyr)
-library(stringr)
-library(tidyr)
 source("pre-processing.R")
 ```
 
