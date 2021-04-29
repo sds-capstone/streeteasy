@@ -127,7 +127,7 @@ sentiments <- sale_listings %>%
                 input = listing_description) %>% # One row per word in listing_description
   anti_join(stop_words) %>% # Removes stop words
   inner_join(afinn_lex) # Scores sentiments on a -5 to +5 scale
-  
+
 sentiment_summary <- sentiments %>% 
   group_by(id) %>% 
   summarise(score = sum(value)) # Shrink df back to one row per listing via total score
@@ -256,6 +256,11 @@ RMSE(y_pred = price_prediction_rf2, y_true = test2$price)
 ```
 
 ```{r adding sentiment scores to model}
+#about 2000 listings does not have a score -- mainly bc their description does not contain any words associated with sentiments; will assign 0 
+sentiments_join <- sentiments_join %>%
+  mutate(score = ifelse(is.na(score) == TRUE, 0, score))
+  
+set.seed(410)
 train3 <- sentiments_join %>% sample_frac(.70)
 test3 <- sentiments_join %>% anti_join(train3)
 
@@ -264,11 +269,16 @@ fancyRpartPlot(tree_sentiments)
 
 sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
 
-price_prediction_rf3 <- predict(sale_listings_rf3, test3, type = "response")
+test_rf3 <- test3 %>%
+  mutate(price_hat = predict(sale_listings_rf3, test3))
+
 varImpPlot(sale_listings_rf3)
 
-price_prediction_rf3 <- as.data.frame(price_prediction_rf3)
-price_prediction_rf3 <- as.integer(price_prediction_rf3$price_prediction_rf3)
-MAPE(y_pred = price_prediction_rf3, y_true = test3$price)
-RMSE(y_pred = price_prediction_rf3, y_true = test3$price)
+MAPE(y_pred = test_rf3$price_hat, y_true = test3$price)
+RMSE(test_rf3$price_hat, test3$price)
+
+# sentiment score
+# MAPE 0.2846391
+# RMSE 403604.8
 ```
+
