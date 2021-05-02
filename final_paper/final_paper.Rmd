@@ -1,9 +1,6 @@
 title: Predicting Real Estate Prices in New York City Using Natural Language Processing and Machine Learning Algorithms
 
 author:
-  - name: Yipeng Lai
-    email: yipengl@zillowgroup.com
-    affiliation: StreetEasy
   - name: Lauren Low
     email: llow@smith.edu
     affiliation: Smith College
@@ -13,7 +10,7 @@ author:
   - name: Emma Scott
     email: escott@smith.edu
     affiliation: Smith College
-  - name: Elaine Ye
+  - name: Xian (Elaine) Ye
     email: xye@smith.edu
     affiliation: Smith College
   - name: Yanwan Zhu
@@ -23,13 +20,10 @@ author:
 address:
   - code: Smith College
     address: Smith College, 1 Chapin Way, Northampton, MA 01063
-  - code: StreetEasy
-    address: StreetEasy, 1250 Broadway, New York, NY 10001
+
 abstract: |
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
+  Will add this in our final draft 
   
-author_summary: |
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
 
 bibliography: mybibfile.bib
 output: rticles::plos_article
@@ -39,21 +33,27 @@ csl: plos.csl
 
 # Introduction
 
-Real estate is one of, if not the biggest, investments an individual makes over the course of their lifetime.
-Traditionally, home valuation has been conducted by professional property appraisers – those licensed and hired to give an opinion of a home’s value, based on prices of neighboring homes, property analysis and judgment.
-In recent years though, there has been an uptick in developing models and algorithmic resources to aid housing price estimates.
-Companies like Zillow, Trulia, and others have developed machine learning models to automate the job of an appraiser.
-These organizations take into account housing attributes including property size, number of bedrooms, number of bathrooms, geographic location, state of the economy, among other variables to predict home prices.
+The largest investments an individual makes over the course of their lifetime is often the purchase of real estate. 
+Traditionally, home valuation has been conducted by professional property appraisers – those licensed and hired to give an opinion of a home’s value, based on prices of neighboring homes, property analysis and judgment. 
+In recent years though, there has been an uptick in models and algorithms for estimating housing price. 
+Companies like Zillow, Trulia, and others have developed machine learning models to automate the job of an appraiser. 
+These organizations take into account housing attributes including property size, number of bedrooms, number of bathrooms, geographic location, state of the economy, among other variables to predict home prices.  
 
-StreetEasy, launched in 2006 and acquired by Zillow in 2013, is reshaping the ways people buy, sell and rent property in New York City and New Jersey.
-StreetEasy’s existing predictive tool uses metrics on bedrooms, bathrooms, property size, and geographic features to estimate particular listing prices, similar to Zillow’s Zestimate.
-One feature the current machine learning algorithm neglects is the descriptive text of given listings.
-A primary objective of this project is to convert text-based listing descriptions into input variables for the purpose of improving predictive model accuracy.
-In particular, we want to research whether listing descriptions can be utilized to create meaningful features to improve the accuracy of predicting home prices.
+StreetEasy, launched in 2006 and acquired by Zillow in 2013, is reshaping the way people buy, sell and rent property in New York City and New Jersey. 
+Similar to Zillow’s Zestimate, StreetEasy’s existing predictive tool uses metrics on bedrooms, bathrooms, property size, and geographic features to estimate particular listing prices.
+While these physical features of a property are certainly important to intergrate in models to predict housing price, researchers have found that basic features alone are not enough to differentiate price for houses that have similar features, and the text descriptions may contain more details of a property that could potentially impact the price.  
 
-Past literature supports leveraging machine learning algorithms with natural language processing to improve prediction accuracy @chen2018integrating [@ivanov2020improving].
+There has been an increasing interests in using natural language processing (NLP) to explore whether text information, such as customers’ reviews on short-term rentals or property descriptions, could further denote the quality of a property and improve the predictive accuracy of rental or housing price. 
+Among these studies, different NLP techniques, including doc2vec, word extractions, and sentiment analysis, have been applied and shown to improve machine learning models when adding to the basic features model. 
+@vargas2019model examine tokens in listing descriptions that are correlated with price (e.g., “swimming pool”, “remodel”) and find that the gradient boost model with text descriptions based on doc2vec performed better than the one that only uses property features. 
+Using sentiment analysis of customers’ reviews on Airbnb as proxy of listing quality, @lawani2019reviews extracted the words associated with positive or negative emotions from the reviews and derived a sentiment score for each listing of Boston Airbnb. 
+Results suggest sentiment scores performed better at predicting host price than a single rating indicator that asks customers how satisfied they were using a scale from 1 to 5. 
+Adopting a more unstructured method, @shen2021information extract the attributes (e.g., “graceful”) from textual descriptions and quantified the uniqueness of a property, and it turns out the uniqueness of property increases the accuracy of prediction model. 
 
 ## Research Questions and Objectives
+Considering text features are able to increase prediction accuracy based on previous literature, a primary objective of this project is to convert text-based listing descriptions into input variables for the purpose of improving predictive model accuracy. 
+In particular, we investigate whether listing descriptions can be utilized to create meaningful features to improve the accuracy of predicting home prices. 
+
 Some research questions include:
 
 - Can we use listing attributes to predict home prices?
@@ -63,10 +63,12 @@ Some research questions include:
 Many questions already have preliminary answers.
 In StreetEasy’s current model, home prices are predicted using variables such as number of bedrooms, number of bathrooms, property size, time to subway, year the property was built and property neighborhood/geographic coordinates.
 To predict home prices more accurately, we include the listing description in the model.
-Using  bag-of-words method and word embeddings to extract keywords, our analysis has yielded some key phrases such as “stainless steel,” “washer dryer,” “windows,” “storage,” “central park” and “closet space”.
+Using bag-of-words method and word embeddings to extract keywords, our analysis has yielded some key phrases such as “stainless steel,” “washer dryer,” “windows,” “storage,” “central park” and “closet space”. 
+In addition, we are interested in conducting sentiment analysis to derive an affect score that indicates how positive a textual description is. 
 
 In asking and answering these questions our goal is to improve upon StreetEasy’s existing machine learning algorithm by combining current models with text-based analysis to predict home prices.
-By creating new variables from the listing descriptions – binary variables for the term “stainless steel”, say – we aim to improve prediction accuracy.
+By creating new variables from the listing descriptions,we aim to improve prediction accuracy. We plan to conduct random forest models and use Mean Absolute Percentage Error (MAPE) and Root Mean Squared Error (RMSE) to evaluate our models.  
+
 
 # Methods
 

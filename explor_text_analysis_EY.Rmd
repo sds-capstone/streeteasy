@@ -44,7 +44,9 @@ sale_tk_count <- sale_text_tk %>%
 uni_freq <- sale_tk_count %>%
   head(50) %>%
   ggplot(aes(y=reorder(word,n), x = n)) + 
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity", fill="#339999") + 
+  labs(title = "Top 50 Frequent Words in Listing Descriptions", x = "count", y="word") +
+  theme_minimal()
 
 #stemming 
 sale_tk_stem <- text %>%
@@ -78,7 +80,9 @@ sale_bi_count <- sale_bigram %>%
 bi_freq <- sale_bi_count %>%
   head(50) %>%
   ggplot(aes(y=reorder(bigram,n), x = n)) + 
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity", fill="#339999") + 
+  labs(title = "Top 50 Frequent Bigrams in Listing Descriptions", x = "count", y="bigram") +
+  theme_minimal()
 bi_freq
 ```
 
