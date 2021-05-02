@@ -1,0 +1,97 @@
+---
+title: "YZ_TextAnalysis"
+author: "Yanwan Zhu"
+date: "4/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+library(janitor)
+library(topicmodels)
+library(textmineR)
+source("pre-processing.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+load_data() 
+clean_data()
+sale_listings_imputed <- impute_data()
+```
+
+```{r some preprocessing}
+data_higher <- sale_listings_imputed %>%
+  filter(price > quantile(price, 0.75))
+
+data <- data_higher
+
+data$listing_description <- sub("RT.*:", "", data$listing_description)
+data$listing_description <- sub("@.* ", "", data$listing_description)
+
+text_cleaning_tokens <- data %>% 
+  select(id, listing_description)%>%
+  tidytext::unnest_tokens(word, listing_description)
+
+text_cleaning_tokens$word <- gsub('[[:digit:]]+', '', text_cleaning_tokens$word)
+text_cleaning_tokens$word <- gsub('[[:punct:]]+', '', text_cleaning_tokens$word)
+
+text_cleaning_tokens <- text_cleaning_tokens %>% filter(!(nchar(word) == 1))%>% 
+  anti_join(stop_words)
+
+tokens <- text_cleaning_tokens %>% 
+  filter(!(word=="")) %>% 
+  mutate(ind = row_number()) %>% 
+  group_by(id) %>% 
+  mutate(ind = row_number()) %>%
+  tidyr::spread(key = ind, value = word)
+
+tokens[is.na(tokens)] <- ""
+tokens <- tidyr::unite(tokens, listing_description,-id,sep =" " )
+tokens$listing_description <- trimws(tokens$listing_description)
+
+#create DTM
+dtm <- CreateDtm(tokens$listing_description, 
+                 doc_names = tokens$id, 
+                 ngram_window = c(1, 2))
+#explore the basic frequency
+tf <- TermDocFreq(dtm = dtm)
+original_tf <- tf %>% select(term, term_freq,doc_freq)
+rownames(original_tf) <- 1:nrow(original_tf)
+# Eliminate words appearing less than 2 times or in more than half of the
+# documents
+vocabulary <- tf$term[ tf$term_freq > 1 & tf$doc_freq < nrow(dtm) / 2 ]
+dtm = dtm
+```
+
+```{r LDA model and by-word}
+topic_model <- LDA(dtm, k = 4, method="Gibbs", 
+                   control= list(nstart=nstart, 
+                                 seed = 410, best= TRUE, 
+                                 burnin = 1000, 
+                                 iter = 2000, 
+                                 thin = 500))
+
+topics <- tidy(topic_model, matrix = "beta")
+topic_terms <- topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 50) %>% 
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  filter(!(term %in% c("bedroom", "bedrooms", "bathroom", "home", "house", "living")))
+
+plot <- topic_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+
+plot
+```
+
+```{r by document}
+documents <- tidy(topic_model, matrix = "gamma")
+```
+
