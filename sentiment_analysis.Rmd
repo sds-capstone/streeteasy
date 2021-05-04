@@ -67,3 +67,19 @@ afinn <- word_col %>%
   mutate(score = sum(value))
 afinn
 ```
+
+```{r make variables for number of words and characters}
+# run chunks 6 and 16 to get sentiments_join
+sentiment_wc <- sentiments_join %>%
+  mutate(char_count = str_count(listing_description), 
+         word_count = sapply(strsplit(listing_description, " "), length))
+```
+
+```{r scatter of words vs sentiment score}
+sentiment_linear <- lm(score ~ word_count, data = sentiment_wc)
+summary(sentiment_linear)
+
+ggplot(sentiment_wc, aes(x = word_count, y = score)) + 
+  geom_point() +
+  geom_smooth(method = lm)
+```
