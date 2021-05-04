@@ -75,10 +75,12 @@ sale_listings_ss <<- sale_listings_imputed %>%
   sentiment_summary <- sentiments %>% 
     group_by(id) %>% 
     summarise(score = sum(value)) 
-  
   sale_listings_ss <<- left_join(sale_listings_ss, sentiment_summary, by = "id")
   #for listings that have no emotion-associated words, use score = 0
+  #mutate all binary variables to factors 
   sale_listings_ss <<- sale_listings_ss %>%
-    mutate(score = ifelse(is.na(score) == TRUE, 0, score))
+    mutate(score = ifelse(is.na(score) == TRUE, 0, score)) %>%
+    mutate_if(is.integer, as.factor)
+
 }
 
