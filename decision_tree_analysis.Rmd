@@ -23,6 +23,11 @@ load_data() # creates two dataframes in the global environment
 clean_data() # cleans the data
 
 sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
+
+#call data with all text-based variables 
+source("text_processing.R")
+
+text_var()
 ```
 
 ```{r}
@@ -35,105 +40,6 @@ train <- train %>%
 
 test <- test %>%
   mutate(log10size = log10(size_sqft))
-```
-
-```{r}
-# should we put this in pre-processing as well?
-# # Based on unittype
-# Group 1: B (Building), M (Multifamily), Z(Auction)
-# Group 2: H (House),T (Townhouse), 
-# Group 3: A (Land), C (Commercial), R (Rental), P (Coop), Y-fractional 
-# Group 4: D (Condo), F (Apt), N (CondoP)
-# Group 5: X (anyhouse), U (unclassified), ? (Unknown)
-
-# # Group cities (based on mean and median of price per sqft):
-# Group 1: Long Island City
-# Group 2: New York
-# Group 3: Astoria, Brooklyn, Hoboken, Toms River, Flushing, Edgewater, Elmhurst, Sunnyside
-# Group 4: All other
-
-sale_listings_imputed <- sale_listings_imputed %>%
-    mutate(unit_group = ifelse(unittype %in% c("B", "M", "Z"), 1, 
-                                ifelse(unittype %in% c("H", "T"), 2, 
-                                       ifelse(unittype %in% c("A", "C", "R", "P", "Y"), 3, 
-                                              ifelse(unittype %in% c("D", "F", "N"), 4,
-                                                     ifelse(unittype %in% c("X", "U", "?"), 5, unittype)))))) %>%
-    mutate(unit_group = as.factor(unit_group))
-  
-sale_listings_imputed <- sale_listings_imputed %>%
-    mutate(city_group = ifelse(major_city == "Long Island City", 1, 
-                               ifelse(major_city == "New York", 2, 
-                                      ifelse(major_city %in% c("Astoria", "Brooklyn",
-                                                               "Hoboken", "Toms River",
-                                                               "Flushing", "Edgewater",
-                                                               "Elmhurst", "Sunnyside"), 3,
-                                             4)))) %>%
-    mutate(city_group = as.factor(city_group))
-
-sale_listings_imputed <- sale_listings_imputed %>%
-  mutate(is_historic = ifelse(is.na(is_historic) == TRUE, "0", is_historic))
-
-sale_listings_ss <- sale_listings_imputed %>%
-  mutate(listing_description = ifelse(is.na(listing_description) == TRUE, 0, listing_description)) %>%
-  mutate(
-    stainless_steel = as.integer(str_detect(listing_description, "[Ss]tainless.[Ss]teel")),
-    hw_floors = as.integer(str_detect(listing_description, "[Hh]ardwood.[Ff]loors?")),
-    wd = as.integer(str_detect(listing_description, c(
-      "[Ww]d",
-      "[Ww]/d",
-      "[Ww]&d",
-      "[Ww] & d",
-      "[Ww]asher/dryer",
-      "[Ww]asher / dryer",
-      "[Ww]asher and dryer",
-      "[Ww]asher&dryer",
-      "[Ww]asher & dryer",
-      "[Ww]asher-dryer",
-      "[Ww]asher dryer"
-    ))),
-    steel_app = as.integer(str_detect(listing_description, "[Ss]teel.[Aa]ppliances?")),
-    fitness = as.integer(str_detect(listing_description, c(
-      "[Ff]itness",
-      "[Ff]itness center",
-      "[Ff]itness-center"
-    ))),
-    renovate = as.integer(str_detect(listing_description, "[Rr]enovat*")),
-    closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
-    spacious = as.integer(str_detect(listing_description, "[Ss]pacious*")),
-    storage = as.integer(str_detect(listing_description, "[Ss]torage")),
-    closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
-    roof_deck = as.integer(str_detect(listing_description, "[Rr]oof.[Dd]eck")),
-    park = as.integer(str_detect(listing_description, "[Pp]ark")),
-    balcony = as.integer(str_detect(listing_description, "[Bb]alcony")),
-    courtyard = as.integer(str_detect(listing_description, "[Cc]ourtyard")),
-    view = as.integer(str_detect(listing_description, "[Vv]iew*")),
-    window = as.integer(str_detect(listing_description, "[Ww]indow*")),
-    natural_light = as.integer(str_detect(listing_description, "[Nn]atural.[Ll]ight")),
-    en_suite = as.integer(str_detect(listing_description, "[Ee]n.[Ss]uite")),
-    pet_friendly = as.integer(str_detect(listing_description, "[Pp]et.[Ff]riendly")),
-    tree_lined = as.integer(str_detect(listing_description, "[Tt]ree.[Ll]ined")),
-    central_park = as.integer(str_detect(listing_description, "[Cc]entral.[Pp]ark")),
-    outdoor_space = as.integer(ifelse((park | balcony | courtyard | roof_deck | central_park | tree_lined) == 1, 1, 0))                              
-  )
-```
-Emma's sentiment analysis on sale_listings data frame:
-```{r load afinn sentiment lexicon, cache = TRUE}
-afinn_lex <- get_sentiments("afinn")
-```
-
-```{r data frame sentiment analysis}
-sentiments <- sale_listings %>% 
-  select(id, listing_description) %>% # Preserve property_id for future use
-  unnest_tokens(output = word,
-                input = listing_description) %>% # One row per word in listing_description
-  anti_join(stop_words) %>% # Removes stop words
-  inner_join(afinn_lex) # Scores sentiments on a -5 to +5 scale
-
-sentiment_summary <- sentiments %>% 
-  group_by(id) %>% 
-  summarise(score = sum(value)) # Shrink df back to one row per listing via total score
-
-sentiments_join <- left_join(sale_listings_ss, sentiment_summary, by = "id") # Rejoined w/ imputed dataset
 ```
 
 This is old decision tree analysis:
@@ -216,15 +122,18 @@ test2 <- sale_listings_ss %>% anti_join(train2)
 tree_all_ss = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group, data = train2, method = "anova", control = rpart.control(cp = 0.005))
 fancyRpartPlot(tree_all_ss)
 
-sale_listings_rf2 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group, data = train2, ntree = 10)
+set.seed(410)
+sale_listings_rf2 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + city_group + stainless_steel + hw_floors + wd + pet_friendly, data = train2, ntree = 10)
 
-price_prediction_rf2 <- predict(sale_listings_rf2, test2, type = "response")
+#+ is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group
+
+test_rf2 <- test2 %>%
+  mutate(price_hat = predict(sale_listings_rf2, test2))
+
 varImpPlot(sale_listings_rf2)
 
-price_prediction_rf2 <- as.data.frame(price_prediction_rf2)
-price_prediction_rf2 <- as.integer(price_prediction_rf2$price_prediction_rf2)
-MAPE(y_pred = price_prediction_rf2, y_true = test2$price)
-RMSE(y_pred = price_prediction_rf2, y_true = test2$price)
+MAPE(y_pred = test_rf2$price_hat, y_true = test2$price)
+RMSE(test_rf2$price_hat, test2$price)
 
 
 # bed
@@ -238,53 +147,57 @@ RMSE(y_pred = price_prediction_rf2, y_true = test2$price)
 # RMSE 596811.7
 
 # county 
-# MAPE 0.4232981
-# RMSE 492696.5
+# MAPE 0.4291711
+# RMSE 506354.3
+
+# is_historic
+# MAPE 0.3490612
+# RMSE 454462.8
+
+# floor_count
+# MAPE 0.3242541
+# RMSE 426788.2
+
+# city_group 
+# MAPE 0.3153056
+# RMSE 427624.5
 
 # stainless_steel 
 # hw_floors 
 # wd 
 # pet_friendly
-# MAPE 0.3444683
-# RMSE 453719.1
+# MAPE 0.2860886
+# RMSE 408977.7
 
-# is_historic
-# floor_count
-# MAPE 0.317671
-# RMSE 411778.2
-
-# city_group 
-# MAPE 0.2919856
-# RMSE 408841
 ```
 
 ```{r adding sentiment scores to model}
 #about 2000 listings does not have a score -- mainly bc their description does not contain any words associated with sentiments; will assign 0 
-sentiments_join <- sentiments_join %>%
-  mutate(score = ifelse(is.na(score) == TRUE, 0, score))
   
 set.seed(410)
-train3 <- sentiments_join %>% sample_frac(.70)
-test3 <- sentiments_join %>% anti_join(train3)
+train3 <- sale_listings_ss %>% sample_frac(.70)
+test3 <- sale_listings_ss %>% anti_join(train3)
 
 tree_sentiments = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, method = "anova", control = rpart.control(cp = 0.005))
 
 fancyRpartPlot(tree_sentiments)
 
-sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
+set.seed(410)
+sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + city_group + stainless_steel + hw_floors + wd + pet_friendly + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
+
+varImpPlot(sale_listings_rf3) 
 
 test_rf3 <- test3 %>%
   mutate(price_hat = predict(sale_listings_rf3, test3))
-
-varImpPlot(sale_listings_rf3)
 
 MAPE(y_pred = test_rf3$price_hat, y_true = test3$price)
 RMSE(test_rf3$price_hat, test3$price)
 
 # sentiment score
-# MAPE 0.2846391
-# RMSE 403604.8
+# MAPE  0.2816914
+# RMSE 405217.2
 #I tried logprice and logsize but the RMSE for the same model went worse; probably we just go with raw price 
+
 ```
 
 #model tuning 
@@ -297,15 +210,17 @@ mtry <- 2:20
 tunegrid <- expand.grid(.mtry = mtry)
 
 #select all variables in the model for model tuning - let decision tree decide which one is important to keep
-sale_listings_tune <- sentiments_join %>%
+sale_listings_tune <- sale_listings_ss %>%
   select(-id, -property_id, -listing_description, -size_sqft_na, -addr_street, -addr_unit, -zipcode, -year_built, -lat, -long, -major_city)
 
 set.seed(410)
 traint <- sale_listings_tune %>% sample_frac(.70)
 testt <- sale_listings_tune %>% anti_join(traint)
 
+#decision tree 
 #rpart2 in caret takes in maxdepth
-#max depth 8
+#max depth 8 for decision tree
+set.seed(410)
 rpart_tune <- caret::train(form = price~.,
                            data = traint,
                            method="rpart2",
@@ -316,9 +231,10 @@ rpart_tune <- caret::train(form = price~.,
 depth_8 <- rpart(price ~., data = traint, method = "anova", control = rpart.control(maxdepth = 8))
 fancyRpartPlot(depth_8)
 
-#the best model is mtry17 
-#ignore rf name 
-depth8_rf <- caret::train(price ~ ., 
+#random forest 
+#this take forever to run - the best model is mtry17 
+set.seed(410)
+best_rf <- caret::train(price ~ ., 
                           data = traint, 
                           method = "rf",
                           ntree = 100, 
@@ -327,6 +243,8 @@ depth8_rf <- caret::train(price ~ .,
                           tuneGrid = tunegrid,
                           na.action = na.omit)
 
+#run the following model for mtry = 17
+set.seed(410)
 mtry <- 17
 bestmtry <- expand.grid(.mtry = mtry)
 
@@ -358,7 +276,12 @@ RMSE(test_rf17$price_hat, testt$price)
 #random forest mtry = 17, ntree = 100, all vars
 #mape  0.2619716
 #rmse 391404.6
+
+summary(sale_listings$is_historic)
+unique(sale_listings_imputed$is_historic)
+summary(sentiments_join$is)
 ```
+
 
 
 https://rstudio-pubs-static.s3.amazonaws.com/71575_4068e2e6dc3d46a785ad7886426c37db.html
