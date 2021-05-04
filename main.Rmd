@@ -11,6 +11,7 @@ library(tidyverse)
 library(readr)
 # Use the pre-processing script
 source("pre-processing.R")
+source("text_processing.R")
 ```
 
 
@@ -24,8 +25,16 @@ clean_data() # cleans the data
 
 sale_listings_imputed <- impute_data() # imputes size values and returns a new dataframe
 
+#ml_setup sometimes does not work
 ml_setup(sale_listings_imputed) # splits the input data into test and training sets
 ```
+
+```{r text processing}
+#must run pre-processing up to impute_data before text processing
+text_var() #create binary variables and sentiment score based on text features
+```
+
+
 
 ```{r check imputation}
 original <- ggplot(data=sale_listings_imputed, aes(x=size_sqft))+
