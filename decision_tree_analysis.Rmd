@@ -3,7 +3,7 @@ title: "decision_tree_analysis"
 output: html_document
 ---
 
-```{r loading packages}
+```{r loading packages, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(tidymodels)
 library(rattle)
@@ -36,6 +36,7 @@ train <- train %>%
 test <- test %>%
   mutate(log10size = log10(size_sqft))
 ```
+
 ```{r}
 # should we put this in pre-processing as well?
 # # Based on unittype
@@ -127,7 +128,7 @@ sentiments <- sale_listings %>%
                 input = listing_description) %>% # One row per word in listing_description
   anti_join(stop_words) %>% # Removes stop words
   inner_join(afinn_lex) # Scores sentiments on a -5 to +5 scale
-  
+
 sentiment_summary <- sentiments %>% 
   group_by(id) %>% 
   summarise(score = sum(value)) # Shrink df back to one row per listing via total score
@@ -207,8 +208,10 @@ RMSE(y_pred = price_prediction_rf, y_true = test$price)
 high mape ): yikes!
 
 ```{r adding new variables to improve baseline model}
+set.seed(410)
 train2 <- sale_listings_ss %>% sample_frac(.70)
 test2 <- sale_listings_ss %>% anti_join(train2)
+
 
 tree_all_ss = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group, data = train2, method = "anova", control = rpart.control(cp = 0.005))
 fancyRpartPlot(tree_all_ss)
@@ -272,3 +275,110 @@ price_prediction_rf3 <- as.integer(price_prediction_rf3$price_prediction_rf3)
 MAPE(y_pred = price_prediction_rf3, y_true = test3$price)
 RMSE(y_pred = price_prediction_rf3, y_true = test3$price)
 ```
+
+```{r adding sentiment scores to model}
+#about 2000 listings does not have a score -- mainly bc their description does not contain any words associated with sentiments; will assign 0 
+sentiments_join <- sentiments_join %>%
+  mutate(score = ifelse(is.na(score) == TRUE, 0, score))
+  
+set.seed(410)
+train3 <- sentiments_join %>% sample_frac(.70)
+test3 <- sentiments_join %>% anti_join(train3)
+
+tree_sentiments = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, method = "anova", control = rpart.control(cp = 0.005))
+
+fancyRpartPlot(tree_sentiments)
+
+sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
+
+test_rf3 <- test3 %>%
+  mutate(price_hat = predict(sale_listings_rf3, test3))
+
+varImpPlot(sale_listings_rf3)
+
+MAPE(y_pred = test_rf3$price_hat, y_true = test3$price)
+RMSE(test_rf3$price_hat, test3$price)
+
+# sentiment score
+# MAPE 0.2846391
+# RMSE 403604.8
+#I tried logprice and logsize but the RMSE for the same model went worse; probably we just go with raw price 
+```
+
+#model tuning 
+```{r}
+library(caret)
+numFolds <- trainControl(method = "cv", number = 5)
+tune.grid <- expand.grid(maxdepth = 2:25)
+cpGrid <- expand.grid(.cp = seq(0.001, 0.3, 0.002))
+mtry <- 2:20
+tunegrid <- expand.grid(.mtry = mtry)
+
+#select all variables in the model for model tuning - let decision tree decide which one is important to keep
+sale_listings_tune <- sentiments_join %>%
+  select(-id, -property_id, -listing_description, -size_sqft_na, -addr_street, -addr_unit, -zipcode, -year_built, -lat, -long, -major_city)
+
+set.seed(410)
+traint <- sale_listings_tune %>% sample_frac(.70)
+testt <- sale_listings_tune %>% anti_join(traint)
+
+#rpart2 in caret takes in maxdepth
+#max depth 8
+rpart_tune <- caret::train(form = price~.,
+                           data = traint,
+                           method="rpart2",
+                           tuneGrid = tune.grid,
+                           trControl = numFolds,
+                           metric = "RMSE")
+
+depth_8 <- rpart(price ~., data = traint, method = "anova", control = rpart.control(maxdepth = 8))
+fancyRpartPlot(depth_8)
+
+#the best model is mtry17 
+#ignore rf name 
+depth8_rf <- caret::train(price ~ ., 
+                          data = traint, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          tuneGrid = tunegrid,
+                          na.action = na.omit)
+
+mtry <- 17
+bestmtry <- expand.grid(.mtry = mtry)
+
+#caret rf mtry = 17, ntree = 100, all vars
+#RMSE: 383510.2
+mtry_17 <- caret::train(price ~ ., 
+                          data = traint, 
+                          method = "rf",
+                          tuneGrid = bestmtry,
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+
+model_rf_17 <- randomForest(
+  form = price~.,
+  data = traint, 
+  mtry = 17,
+  ntree = 100)
+
+varImpPlot(model_rf_17)
+
+test_rf17 <- testt %>%
+  mutate(price_hat = predict(model_rf_17, testt))
+
+
+MAPE(y_pred = test_rf17$price_hat, y_true = testt$price)
+RMSE(test_rf17$price_hat, testt$price)
+#random forest mtry = 17, ntree = 100, all vars
+#mape  0.2619716
+#rmse 391404.6
+```
+
+
+https://rstudio-pubs-static.s3.amazonaws.com/71575_4068e2e6dc3d46a785ad7886426c37db.html
+
+https://topepo.github.io/caret/available-models.html
