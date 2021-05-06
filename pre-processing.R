@@ -142,6 +142,11 @@ impute_data <- function(){
     mutate(size_sqft = exp(log_size)) %>%
     select(-log_size)
   
+  #we looked at the two listings that have NA in is_historic and they were not historic (built in 2007);
+  #resolve NA for random forest models 
+  sale_listings_imputed <- sale_listings_imputed %>%
+    mutate(is_historic = replace_na(is_historic, 0))
+  
   #group unittype and cities to create less levels 
   sale_listings_imputed <- sale_listings_imputed %>%
     mutate(unit_group = ifelse(unittype %in% c("B", "M", "Z"), 1, 
