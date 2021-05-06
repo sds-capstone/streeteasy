@@ -203,13 +203,8 @@ RMSE(test_rf3$price_hat, test3$price)
 #model tuning 
 ```{r}
 library(caret)
-numFolds <- trainControl(method = "cv", number = 5)
-tune.grid <- expand.grid(maxdepth = 2:25)
-cpGrid <- expand.grid(.cp = seq(0.001, 0.3, 0.002))
-mtry <- 2:20
-tunegrid <- expand.grid(.mtry = mtry)
-
 #select all variables in the model for model tuning - let decision tree decide which one is important to keep
+#in total we have 42 variables; if taken all levels of categorical vars into account, we have 71 variables 
 sale_listings_tune <- sale_listings_ss %>%
   select(-id, -property_id, -listing_description, -size_sqft_na, -addr_street, -addr_unit, -zipcode, -year_built, -lat, -long, -major_city)
 
@@ -217,22 +212,13 @@ set.seed(410)
 traint <- sale_listings_tune %>% sample_frac(.70)
 testt <- sale_listings_tune %>% anti_join(traint)
 
-#decision tree 
-#rpart2 in caret takes in maxdepth
-#max depth 8 for decision tree
-set.seed(410)
-rpart_tune <- caret::train(form = price~.,
-                           data = traint,
-                           method="rpart2",
-                           tuneGrid = tune.grid,
-                           trControl = numFolds,
-                           metric = "RMSE")
-
-depth_8 <- rpart(price ~., data = traint, method = "anova", control = rpart.control(maxdepth = 8))
-fancyRpartPlot(depth_8)
-
 #random forest 
-#this take forever to run - the best model is mtry17 
+#the default mtry for regression is var/3, the grid is set up around that range
+#this take forever to run - the best model is mtry = 26 
+
+numFolds <- trainControl(method = "cv", number = 5)
+mtry <- 12:30
+tunegrid <- expand.grid(.mtry = mtry)
 set.seed(410)
 best_rf <- caret::train(price ~ ., 
                           data = traint, 
@@ -243,14 +229,17 @@ best_rf <- caret::train(price ~ .,
                           tuneGrid = tunegrid,
                           na.action = na.omit)
 
-#run the following model for mtry = 17
-set.seed(410)
-mtry <- 17
-bestmtry <- expand.grid(.mtry = mtry)
 
-#caret rf mtry = 17, ntree = 100, all vars
-#RMSE: 383510.2
-mtry_17 <- caret::train(price ~ ., 
+#extract the best mtry from the best_fr model 
+best_mtry <- best_rf$bestTune$mtry 
+
+best_mtry <- 26
+bestmtry <- expand.grid(.mtry = best_mtry)
+
+
+set.seed(410)
+#run the following model for mtry = 26
+mtry_26 <- caret::train(price ~ ., 
                           data = traint, 
                           method = "rf",
                           tuneGrid = bestmtry,
@@ -259,27 +248,17 @@ mtry_17 <- caret::train(price ~ .,
                           metric = "RMSE",
                           na.action = na.omit)
 
-model_rf_17 <- randomForest(
-  form = price~.,
-  data = traint, 
-  mtry = 17,
-  ntree = 100)
+varimp_20 <- varImp(mtry_26)
+print(varimp_20)
 
-varImpPlot(model_rf_17)
+test_rf26 <- testt %>%
+  mutate(price_hat = predict(mtry_26, testt))
 
-test_rf17 <- testt %>%
-  mutate(price_hat = predict(model_rf_17, testt))
-
-
-MAPE(y_pred = test_rf17$price_hat, y_true = testt$price)
-RMSE(test_rf17$price_hat, testt$price)
-#random forest mtry = 17, ntree = 100, all vars
-#mape  0.2619716
-#rmse 391404.6
-
-summary(sale_listings$is_historic)
-unique(sale_listings_imputed$is_historic)
-summary(sentiments_join$is)
+MAPE(y_pred = test_rf26$price_hat, y_true = testt$price)
+RMSE(test_rf26$price_hat, testt$price)
+#caret::train mtry = 26, ntree = 100, all vars
+#mape 0.2561298
+#rmse 383185.2
 ```
 
 
