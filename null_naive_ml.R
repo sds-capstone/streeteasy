@@ -1,20 +1,20 @@
 library(tidyverse)
 library(tidymodels)
 
-amenities <- read.csv("amenities.csv")
-sale_listings <- read.csv("sale_listings.csv")
+# Load, clean, and impute data
+source("pre-processing.R")
+load_data()
+clean_data()
+sale_listings_imputed <- impute_data()
 
-# null_model <- mean(sale_listings$price)
-
-# Create test & training sets
-set.seed(410)
-train <- sale_listings %>% sample_frac(.70)
-test <- sale_listings %>% anti_join(train)
+# Split into test and training set
+ml_setup(sale_listings_imputed)
 
 # log transformation
 train_log10 <- train %>%
   mutate(log10_price = log10(price),
          log10_size_sqft = log10(size_sqft))
+
 test_log10 <- test %>%
   mutate(log10_size_sqft = log10(size_sqft))
 
@@ -30,6 +30,7 @@ test_log10 <- test_log10 %>%
     price_hat = 10^log10_price_hat)
 
 # Compute RMSLE
-rmsle_hat_null <- RMSLE(test_log10$price_hat, test_log10$price)
+rmsle_hat_null <- MLmetrics::RMSLE(test_log10$price_hat, test_log10$price)
+rmse_hat_null <- MLmetrics::RMSE(test_log10$price_hat, test_log10$price)
 rmsle_hat_null
 

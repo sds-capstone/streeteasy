@@ -1,0 +1,346 @@
+---
+title: Predicting Real Estate Prices in New York City Using Natural Language Processing and Machine Learning Algorithms
+author:
+    
+  - name: Lauren Low
+    email: llow@smith.edu
+    affiliation: 1
+  - name: Dayana Meza
+    email: dmeza@smith.edu
+    affiliation: 1
+  - name: Emma Scott
+    email: escott@smith.edu
+    affiliation: 1
+  - name: Xian (Elaine) Ye
+    email: xye@smith.edu
+    affiliation: 1
+  - name: Yanwan Zhu
+    email: yzhu62@smith.edu
+    affiliation: 1
+affiliation:
+  - num: 1
+    address: Smith College, 1 Chapin Way, Northampton, MA 01063
+firstnote: |
+  These authors contributed equally to this work.
+type: article
+status: submit
+bibliography: mybibfile.bib
+appendix: appendix.tex
+simplesummary: |
+  Write this in final draft.
+abstract: |
+  Write this in final draft.
+keywords: |
+  keyword 1; keyword 2; keyword 3 (list three to ten pertinent keywords specific 
+  to the article, yet reasonably common within the subject discipline.).
+acknowledgement: |
+  Write this in final draft. (All sources of funding of the study should be disclosed. Please clearly indicate grants that you have received in support of your research work. 
+  Clearly state if you received funds for covering the costs to publish in open 
+  access.)
+authorcontributions: |
+  For research articles with several authors, a short paragraph specifying their 
+  individual contributions must be provided. The following statements should be 
+  used ``X.X. and Y.Y. conceive and designed the experiments; X.X. performed the 
+  experiments; X.X. and Y.Y. analyzed the data; W.W. contributed 
+  reagents/materials/analysis tools; Y.Y. wrote the paper.'' Authorship must be
+  limited to those who have contributed substantially to the work reported.
+conflictsofinterest: |
+  The authors declare no conflict of interest.
+output:
+  bookdown::pdf_book:
+    base_format: rticles::mdpi_article
+header-includes:
+  - \usepackage{longtable}
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(kableExtra)
+library(bookdown)
+```
+
+# Introduction
+
+The largest investments an individual makes over the course of their lifetime is often the purchase of real estate. Traditionally, home valuation has been conducted by professional property appraisers -- those licensed and hired to give an opinion of a home's value, based on prices of neighboring homes, property analysis and judgment. In recent years though, there has been an uptick in models and algorithms for estimating housing price. Companies like Zillow, Trulia, and others have developed machine learning models to automate the job of an appraiser. These organizations take into account housing attributes including property size, number of bedrooms, number of bathrooms, geographic location, state of the economy, among other variables to predict home prices.
+
+StreetEasy, launched in 2006 and acquired by Zillow in 2013, is reshaping the way people buy, sell and rent property in New York City and New Jersey. Similar to Zillow's Zestimate, StreetEasy's existing predictive tool uses metrics on bedrooms, bathrooms, property size, and geographic features to estimate particular listing prices. While these physical features of a property are certainly important to intergrate in models to predict housing price, researchers have found that basic features alone are not enough to differentiate price for houses that have similar features, and the text descriptions may contain more details of a property that could potentially impact the price.
+
+There has been an increasing interests in using natural language processing (NLP) to explore whether text information, such as customers' reviews on short-term rentals or property descriptions, could further denote the quality of a property and improve the predictive accuracy of rental or housing price. Among these studies, different NLP techniques, including doc2vec, word extractions, and sentiment analysis, have been applied and shown to improve machine learning models when adding to the basic features model. @vargas2019model examine tokens in listing descriptions that are correlated with price (e.g., "swimming pool", "remodel") and find that the gradient boost model with text descriptions based on doc2vec performed better than the one that only uses property features. Using sentiment analysis of customers' reviews on Airbnb as proxy of listing quality, @lawani2019reviews extract the words associated with positive or negative emotions from the reviews and derived a sentiment score for each listing of Boston Airbnb. Results suggest that sentiment scores performed better at predicting host price than a single rating indicator that asks customers how satisfied they were using a scale from 1 to 5. Adopting a more unstructured method, @shen2021information extract the attributes (e.g., "graceful") from textual descriptions and quantify the uniqueness of a property, and it turns out that the uniqueness of property increases the accuracy of the prediction model.
+
+## Research Questions and Objectives
+
+Considering text features are able to increase prediction accuracy based on previous literature, a primary objective of this project is to convert text-based listing descriptions into input variables for the purpose of improving predictive model accuracy. In particular, we investigate whether listing descriptions can be utilized to create meaningful features to improve the accuracy of predicting home prices.
+
+# Methods
+
+## Data and Variables
+
+The data provided by our project partner includes two datasets on sale listings and amenities. StreetEasy collects information from agents by having them directly enter listing information on the website or through a feed from their brokerage. StreetEasy verifies the listing and property information based on records from New York City's Department of Finance and Department of Buildings [@streeteasy_2019].
+
+Our main data set consists of 59,661 sale listings of 52,639 unique properties listed and/or sold on Streeteasy in 2019. It has 31 variables including home price, property attributes (e.g., the number of bedrooms, the number of bathrooms, size in square feet), geospatial information (e.g. state, zipcode, longitude, latitude), and a text description of each listing (see Table \ref{intial_var} ).
+
+## Data Preprocessing
+
+We performed data cleansing and imputation to pre-process our data before running the analyses. First, we select the 95% quantile of the non-zero values as a reasonable range of the listing prices. We choose to do this to eliminate unreasonably high prices that are likely to be artifacts of data entry errors. For the same reason, we also filter out the outliers with unusually large values for property size and number of bedrooms and bathrooms.
+
+In addition, we use zip codes to fill in an estimate for observations without valid latitude/longitude information and created more geographical variables such as city, county, and state using the `zipcodeR` package that pulls information from U.S. Census data [@zipcodeR_2020]. We perform these two steps because of the varying quality of geospatial information in the original data set. First, some of the listings contain four-digit zip codes and erroneous longitude and latitude values such as (0, 0). Second, the original location information about areas and neighborhoods was entered manually by agents, so the location variables do not have uniform criteria and may differ in the level of specificity. Although the new geographic coordinates might not have street-level precision, by incorporating associated features from the `zipcodeR` package, we are able to obtain geographic information that is consistent across listings.
+
+Since some properties are associated with multiple listings in the original data, we remove the listings that appear more than once in the data set. The duplicate listings are results of agents posting the same listing multiple times with updated information. In order to eliminate duplicates, we first group the listings by `property_id` and keep the ones with the fewest missing values for all variables within each group. Next, we select the rows with the longest listing descriptions and the largest number of bedrooms within each group. Last, we use the `distinct()` function to keep one unique listing corresponding to each `property_id`.
+
+Because nearly 20% of the observations do not have values for the `size_sqft` variable, we plan to use the `mice` package to impute missing property size values by regression (`norm.predict`) [@mice_2011]. The predictors of the imputation consist of the number of bedrooms, the number of bathrooms, unit type, floor count, city, and state.
+
+We also create a new `city_group` variable which put the cities into categories based on the mean and median prices of houses within the areas, because there are too many levels in the original city variable. The process and rationale of creating this new variable will be included in the final draft, because we plan to change the grouping this week.
+
+```{=tex}
+\renewcommand{\arraystretch}{1.25}
+\begin{table}[htb]
+\caption{Summary statistics of numerical variables.}\label{numDescriptive}
+\begin{center}
+\begin{scriptsize} 
+\begin{tabular} {l r r r r r r }
+ \multicolumn{ 6 }{l}{ } \cr 
+ \hline Variable  &   {n} &  {mean} &  {sd} &  {median} &  {min} &  {max}\cr 
+  \hline 
+price   &  41325  &  1125462.75  &  874401.83  &  829000.00  &  40000.00  &  4599000.00 \cr 
+ bedrooms   &  41325  &        2.58  &       2.11  &       2  &      0  &       36.00 \cr 
+ bathrooms   &  41325  &        1.85  &       1.13  &       2  &      0  &       20.00 \cr 
+ size\_sqft   &  41325  &     1520.31  &    1198.34  &    1190  &    100  &    64713.91 \cr 
+ floor\_count   &  41325  &        9.94  &      14.30  &       4  &      0  &       96.00 \cr 
+ \hline 
+\end{tabular}
+\end{scriptsize}
+\end{center}
+\end{table}
+```
+```{=tex}
+\renewcommand{\arraystretch}{1.25}
+\begin{table}[ htpb ] 
+\centering 
+\caption{Summary statistics of categorical variables.}\label{catDescriptive}
+\begin{tabular}{ l c }
+\toprule
+ &   \multicolumn{ 1 }{c}{ Count (\%) }\\ 
+ & n = 41325 \\ 
+ \midrule
+county &  \\ 
+\hspace{6pt}    Bergen County & 98 (0.2\%)\\ 
+\hspace{6pt}    Bronx County & 1481 (3.6\%)\\ 
+\hspace{6pt}    Essex County & 1 (0\%)\\ 
+\hspace{6pt}    Hudson County & 6329 (15.3\%)\\ 
+\hspace{6pt}    Kings County & 12008 (29.1\%)\\ 
+\hspace{6pt}    Monmouth County & 1 (0\%)\\ 
+\hspace{6pt}    Nassau County & 6 (0\%)\\ 
+\hspace{6pt}    New York County & 12779 (30.9\%)\\ 
+\hspace{6pt}    Ocean County & 4 (0\%)\\ 
+\hspace{6pt}    Queens County & 7292 (17.6\%)\\ 
+\hspace{6pt}    Richmond County & 1323 (3.2\%)\\ 
+\hspace{6pt}    Union County & 3 (0\%)\\ 
+unittype &  \\ 
+\hspace{6pt}    UNKNWON & 183 (0.4\%)\\ 
+\hspace{6pt}    LAND & 167 (0.4\%)\\ 
+\hspace{6pt}    BUILDING & 266 (0.6\%)\\ 
+\hspace{6pt}    COMMERCIAL & 26 (0.1\%)\\ 
+\hspace{6pt}    CONDO & 17500 (42.3\%)\\ 
+\hspace{6pt}    APARTMENT & 17 (0\%)\\ 
+\hspace{6pt}    HOUSE & 6057 (14.7\%)\\ 
+\hspace{6pt}    MULTIFAMILY & 5624 (13.6\%)\\ 
+\hspace{6pt}    CONDOP & 375 (0.9\%)\\ 
+\hspace{6pt}    COOP & 9891 (23.9\%)\\ 
+\hspace{6pt}    RENTAL & 64 (0.2\%)\\ 
+\hspace{6pt}    TOWNHOUSE & 1069 (2.6\%)\\ 
+\hspace{6pt}    UNCLASSIFIED & 55 (0.1\%)\\ 
+\hspace{6pt}    ANYHOUSE & 1 (0\%)\\ 
+\hspace{6pt}    FRACTIONAL & 25 (0.1\%)\\ 
+\hspace{6pt}    AUCTION & 5 (0\%)\\ 
+\bottomrule
+
+\end{tabular}
+\end{table}
+```
+After data cleaning, we eventually have 41,325 listings in the data set. Table \ref{numDescriptive} and Table \ref{catDescriptive} show the summary statistics of all numerical and categorical variables that are not created from listing descriptions. The mean price is 1,125,424 dollars, but the standard deviation is over 870,000. The number of bedrooms ranges from 0 to 36 with a mean of 2.58 (SD = 2.11). The number of bathrooms ranges from 0 to 20 with a mean of 1.13 (SD = 1.13). The listings are located in buildings with a total of 10 floors on average. The distribution of `size` has a mean of 1496 square feet but a large standard deviation (SD = 1120.27).
+
+## Data Analysis
+
+### Developing models without text features
+
+In order to determine whether adding text features as predictors will improve the accuracy of predicting housing price, we first create a random forest regression model without text features as a baseline model. We can then compare the evaluation metrics of this model and the model with the extracted text features to see if incorporating text-based features improves prediction accuracy. We select the root mean squared log error (RMSLE), the root mean squared error (RMSE), and the mean average percentage error (MAPE) as the evaluation metrics for our random forest regression models. To avoid overfitting and ensure the generalizability of our models, we *plan* to perform k-fold cross validation on each of our models and take the mean RMSLE, RMSE, and MAPE as the metrics for comparison across models. Currently, we split 70% of the data into the training set, and 30% into the test set.
+
+### Developing models with text features
+
+To convert the listing descriptions into meaningful text-based features, the words are
+
+1.  tokenized: the words inside of the listing descriptions are split into word or words (i.e., multiple words tokenized together are called 'n-grams') known as tokens to create a one-token-per-row for text analysis;
+2.  vetted for stop words: removing words that have little to no meaningful information for analysis (e.g., 'the', 'as', 'a', 'of');
+3.  stemmed: finding the base or root of words (e.g., we want to categorize 'windows' the same as 'window'), and lastly
+4.  analyzed for extracting features such as keywords or sentiment score.
+
+(To Ben: is there a way to indent the ordered list in RMD so that it looks like it is centered?)
+
+These steps allow us to use the bag-of-words (BoW) approach, which represents each listing description as a collection of words disregarding grammar. We first measure the frequency of each word token or combinations of word tokens (i.e. n-gram) throughout all listing descriptions in the data set. Then, we use regular expressions to extract features from listing descriptions.
+
+Furthermore, we investigate the listing descriptions using sentiment analysis, also known as opinion mining. While reading, humans are constantly interpreting and categorizing emotional intent like whether a text is generally positive or negative. Or, in a more complex analysis, a text might be characterized as antagonistic or hopeful, for example. Text mining approaches allow us to programmatically analyze the emotion of text. In order to perform these analyses, we view the listing descriptions as combinations of individual words where the entire text's sentiment content is the sum of these words.
+
+We choose to use the `AFINN` lexicon developed by Finn Årup Nielsen. The `AFINN` lexicon is nuanced in a way that alternatives are not because it assigns each single word a score ranging from -5 to 5 where negative scores align with negative sentiments and positive scores with positive sentiments. Lexicons like `AFINN` are validated using combinations of crowdsourcing, individual labor by the author, or some combination of the two. It is important to note that neutral English words are oftentimes left out of lexicons, and qualifiers before a word like "no good" or "not true" are not corrected for and instead must be addressed later if desired. We use `dplyr::inner_join()` to match the `AFINN` sentiment scores with our tokenized and stop-word-less listing description text data. Then we `dplyr::group_by()` and `summarise()` to sum the individual words'; this way there is one overall score per listing such that `score` can be integrated into machine learning models.
+
+In order to generation text-based features, a supplementary approach to the two methods indicated above is pre-trained word embeddings or train word embeddings. To contextualize the semantic relationship of terms, word embeddings examine the pairwise correlation between words and assessing co-occurrences is critical in creating a highly predictive model [@wartena2010keyword; @wieting2016charagram; @matsuo2004keyword].
+
+# Results
+
+## Models without Text Features
+
+```{r noTextVar, echo=FALSE}
+# list of final non-text-based variables
+var_no_text <- data.frame(Variable = c("bedrooms", 
+                                 "bathrooms",
+                                 "unittype", 
+                                 "size_sqft",
+                                 "is_historic",
+                                 "floor_count",
+                                 "county", 
+                                 "city_group"), 
+                    Definition = c("Number of bedrooms",
+                             "Number of bathrooms",
+                             "Property type",
+                             "Size in square feet",
+                             "Whether is in a historic building or not",
+                             "Number of floors in the building",
+                             "County",
+                             "Grouping of cities based on average price"),
+                    Notes = c("Numeric. Same as in original data",
+                             "Numeric. Same as in original data",
+                             "Categorical. Same as in original data.",
+                             "Numeric. Imputed values (the imputation process is described in the  text). ",
+                             "Binary (0 or 1). Same as in original data.",
+                             "Numeric. Same as in original data.",
+                             "Categorical. Inferred from zip codes (described in detail in the text)",
+                             "Categorical. Four categories created based on average prices of properties in each city (described in the text).")
+                    )
+
+knitr::kable(var_no_text, 
+             longtable = FALSE, 
+             format='latex',
+             caption = 'List of variables that are not based on text descriptions.') %>%
+  kableExtra::kable_styling(full_width = FALSE)%>%
+  column_spec(1, width = "5em", border_left = T) %>%
+  column_spec(2, width = "15em") %>%
+  column_spec(3, width = "20em", border_right = T)%>%
+  row_spec(0, bold=T)
+```
+
+We build a 10-tree random forest model to predict housing price using \` bedroom\`, \`bathrooms\`, \`floor_count\`, \`is_historic\`, \`county\`, \`city_group\` as predictors (See Table \@ref(tab:noTextVar) for variable definitions ).
+
+```{r improvement, echo=FALSE}
+mape_rmse <- data.frame(Variables = c("bedrooms, bathrooms, & size_sqft", 
+                             "unittype", 
+                             "county", 
+                             "is_historic",
+                             "floor_count",
+                             "city_group",
+                             "stainless_steel, hardwood floors, washer_dryer, pet_friendly", "sentiment_score"), 
+                    MAPE = c(0.679,
+                             0.563,
+                             0.429,
+                             0.349,
+                             0.324,
+                             0.315,
+                             0.286,
+                             0.281),
+                    RMSE = c(686466.6,
+                             596811.7,
+                             506354.3,
+                             454462.8,
+                             426788.2,
+                             427624.5,
+                             408977.7,
+                             405217.2
+                             ))
+
+knitr::kable(mape_rmse, 
+             longtable = FALSE,
+             format='latex',
+             caption = 'Comparison of MAPE and RMSE when variables are sequentially added in 10-tree random forest models.')%>%
+  kableExtra::kable_styling(full_width = FALSE)%>%
+  column_spec(1, border_left = T) %>%
+  column_spec(3, border_right = T)%>%
+  row_spec(0, bold=T)
+```
+
+Table \@ref(tab:improvement) shows the improvement of prediction performance, indicated by the RMSE and MAPE scores, when non-text-based variables are sequentially added into the model. The final model without text features yields a MAPE score of 0.315 and an RMSE score of 427,624, meaning that the predicted price is on average 31.5% or more than 420,000 dollars off from the true price.
+
+## Model enhancement with text-based variables
+
+In order improve the prediction performance of our model, we create binary variables based on common phrases or words within listing descriptions and sentiment scores of listing descriptions.
+
+### Unigram and bigram analyses
+
+We first perform n-gram analysis to examine the most frequent words and phrases in the listing descriptions (Fig \ref{fig:unigram} and \ref{fig:bigram}).
+
+The bigram analysis reveal that the terms stainless steel, steel appliances, hardwood floors, washer and dryer, fitness center, are some of the most frequently used phrases in this set of listing descriptions. Features related with a property's interior design, appliances and amenities are often included in the listing description, but are not reflected in the original data. Therefore, we want to incorporate into our model these property features that are common in descriptions and examine if they can improve the price prediction performance. Based on the n-gram analyses, we select the following features to include as binary variables into our random forest model: stainless steel, hardwood floor, washer & dryer, and pet friendly.
+
+```{r unigram, fig.cap = "Top 50 most frequent words from unigram analysis.", out.width = "\\textwidth", echo=FALSE}
+knitr::include_graphics("top50_word.pdf")
+```
+
+```{r bigram, fig.cap = "Top 50 most frequent two-word phrases from unigram analysis.", out.width = "\\textwidth", echo=FALSE}
+knitr::include_graphics("top50_bigram.pdf")
+```
+
+### Text-based binary variables
+
+To create binary variables based on each term listed, we use regular expressions to develop a text processing algorithm that reviews each listing description for keywords. For example, the `washer_dryer` variable captures phrases related to washer/dryer using the following regular expressions.
+
+    wd = as.integer(str_detect(listing_description, c(
+          "[Ww]d",
+          "[Ww]/d",
+          "[Ww]&d",
+          "[Ww] & d",
+          "[Ww]asher/dryer",
+          "[Ww]asher / dryer",
+          "[Ww]asher and dryer",
+          "[Ww]asher&dryer",
+          "[Ww]asher & dryer",
+          "[Ww]asher-dryer",
+          "[Ww]asher dryer"))
+
+If the term or its variants (i.e hyphenated terms, capitalized terms, plural terms, etc.) are present in a listing description, the attribute for the description yields a 1 and if absent a 0.
+
+```{r textVar, echo=FALSE}
+var_from_text <- data.frame(Variable = c("stainless_steel", "hw_floors", "wd", "pet_friendly", "score"), 
+                    Definition = c("Whether listing description mentions stainless steel",
+                             "Whether listing description mentions hardwood floor",
+                             "Whether listing description mentions features related to washer/dryer",
+                             "Whether listing description mentions the phrase 'pet friendly'",
+                             "Sentiment score of listing description"),
+                    Notes = c("Binary.",
+                             "Binary.",
+                             "Binary.",
+                             "Binary.",
+                             "Numeric. Sum of sentiment scores of all words in each listing descriptions. Each sentiment-related word get a score from -5 to 5 and all neutral words get a score of 0 (described in the text)."))
+
+knitr::kable(var_from_text, 
+             longtable = FALSE,
+             format='latex',
+             caption = 'List of text-based variables.')%>%
+  kableExtra::kable_styling(full_width = FALSE)%>%
+  column_spec(1, width = "7em", border_left = T) %>%
+  column_spec(2, width = "15em") %>%
+  column_spec(3, width = "18em", border_right = T)%>%
+  row_spec(0, bold=T)
+```
+
+### Random forest models with text-based variables
+
+Table \@ref(tab:textVar) lists all text-based variables that we use in the model. In addition to the binary variables, our latest model includes the numerical sentiment score which is described in detail in the Methods section.
+
+We first add the newly created binary variables for `stainless_steel`, `hardwood_floor`, `washer_dryer`, and `pet_friendly` to the 10-tree random forest model. The introduction of just four binary variables changes the MAPE from 0.315 to 0.286, decreasing the MAPE by approximately 3%. In other words, the random forest model accuracy became approximately 3% more accurate once binary variables were included. The RMSE for the model with binary text-based variables is 408,977, which means the predictions are on average 20,000 dollars more accurate for each listing. Lastly, we add the sentiment scores in the model, and the MAPE marginally increases by 0.5 %, and the RMSE decreases by about 3,000.
+
+```{r varImpPlot, fig.cap = "Variable importance plot of the random forest model.", out.width = "\\textwidth", echo=FALSE}
+knitr::include_graphics("varImpPlot.pdf")
+```
+
+Fig \ref{fig:unigram} shows the relative importance of variables in the random forest model.\
+The `IncNodePurity` on the x-axis is known as the mean decrease in the Gini coefficient. Based on the Gini Impurity index, this measures the variable importance to the model. The higher the value of the mean decrease Gini score, the higher the importance the variable is to the model. The variable importance plot allows us to select important features to include in our model, and steer us away from unimportant variables that often lead to overfitting.
+
+As we can see from Fig \ref{fig:varImpPlot}, the square footage of a property is the most important variable in our model, followed by the number of bathrooms, the county, the number of floors in the building, city group, and sentiment score. While the binary variables do improve the model, they have relatively low importance.
+
+To further decrease the MAPE and RMSE, we plan to create more text-based binary variables and incorporate all variables in the random forest. In addition, we will tune the random forest model by increasing the number of trees and by selecting the best number of variables at each split from a grid of possible numbers of variables. To explore different tree-based models, we plan to try gradient boosting models to improve our prediction accuracy. To validate our model, we will implement 5-fold cross-validation across models. We do think our model could benefit from a 10-fold cross-validation, but that requires computational power beyond what we have right now.
