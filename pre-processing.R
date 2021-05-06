@@ -106,7 +106,29 @@ clean_data <- function(){
            is_historic = as.factor(is_historic),
            major_city = as.factor(major_city),
            county = as.factor(county),
-           state = as.factor(state))
+           state = as.factor(state)) %>%
+    #we looked at the two listings that have NA in is_historic and they were not historic (built in 2007);
+    #resolve NA for random forest models 
+    mutate(is_historic = replace_na(is_historic, 0))
+  
+  # Group cities to reduce number of levels
+  # Look at median price of each city
+  median_price_city <- aggregate(sale_listings$price, 
+                                 by = list(sale_listings$major_city), 
+                                 median)
+  
+  # Create groups based on median prices
+  median_price_city$price_group <- cut(median_price_city$x, 10, include.lowest=TRUE,
+                                       labels = seq(10,1))
+  
+  city_group <- median_price_city%>%
+    select(-x) %>%
+    rename(major_city = Group.1,
+           city_group = price_group)
+  
+  sale_listings <<- left_join(sale_listings, city_group, by = "major_city") %>%
+    mutate(city_group = as.factor(city_group))
+  
 }
 
 impute_data <- function(){
@@ -142,37 +164,15 @@ impute_data <- function(){
     mutate(size_sqft = exp(log_size)) %>%
     select(-log_size)
   
-  #we looked at the two listings that have NA in is_historic and they were not historic (built in 2007);
-  #resolve NA for random forest models 
-  sale_listings_imputed <- sale_listings_imputed %>%
-    mutate(is_historic = replace_na(is_historic, 0))
-  
-  #group unittype and cities to create less levels 
-  sale_listings_imputed <- sale_listings_imputed %>%
-    mutate(unit_group = ifelse(unittype %in% c("B", "M", "Z"), 1, 
-                                ifelse(unittype %in% c("H", "T"), 2, 
-                                       ifelse(unittype %in% c("A", "C", "R", "P", "Y"), 3, 
-                                              ifelse(unittype %in% c("D", "F", "N"), 4,
-                                                     ifelse(unittype %in% c("X", "U", "?"), 5, unittype)))))) %>%
-    mutate(unit_group = as.factor(unit_group))
-  
-  sale_listings_imputed <- sale_listings_imputed %>%
-    mutate(city_group = ifelse(major_city == "Long Island City", 1, 
-                               ifelse(major_city == "New York", 2, 
-                                      ifelse(major_city %in% c("Astoria", "Brooklyn",
-                                                               "Hoboken", "Toms River",
-                                                               "Flushing", "Edgewater",
-                                                               "Elmhurst", "Sunnyside"), 3,
-                                             4)))) %>%
-    mutate(city_group = as.factor(city_group))
-  
   return(sale_listings_imputed)
   
 }
 
 ml_setup <- function(data){
+
   #set seed for spliting train/test
   set.seed(410)
+
   # For now, split the data into training/test sets
   train <<- data %>% sample_frac(.70)
   test <<- data %>% anti_join(train)
