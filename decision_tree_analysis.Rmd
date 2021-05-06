@@ -207,6 +207,7 @@ library(caret)
 #in total we have 42 variables; if taken all levels of categorical vars into account, we have 71 variables 
 sale_listings_tune <- sale_listings_ss %>%
   select(-id, -property_id, -listing_description, -size_sqft_na, -addr_street, -addr_unit, -zipcode, -year_built, -lat, -long, -major_city)
+head(sale_listings_tune)
 
 set.seed(410)
 traint <- sale_listings_tune %>% sample_frac(.70)
@@ -259,6 +260,27 @@ RMSE(test_rf26$price_hat, testt$price)
 #caret::train mtry = 26, ntree = 100, all vars
 #mape 0.2561298
 #rmse 383185.2
+
+#create default mtry 
+set.seed(410)
+#run the following model for mtry = default
+mtry_default <- caret::train(price ~ ., 
+                          data = traint, 
+                          method = "rf",
+                         # tuneGrid = bestmtry,
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+test_rf <- testt %>%
+  mutate(price_hat = predict(mtry_default, testt))
+
+MAPE(y_pred = test_rf$price_hat, y_true = testt$price)
+RMSE(test_rf$price_hat, testt$price)
+#MAPE 0.2486943
+#RMSE 383379.9
+write.csv(test_rf, "test_mtry_default.csv")
+varImp(mtry_default)
 ```
 
 
