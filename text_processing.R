@@ -32,17 +32,20 @@ sale_listings_ss <<- sale_listings_imputed %>%
       "[Ff]itness-center"
     ))),
     
-    # top 10 words with highest price avergae and highest frequency
+    # top 10 words with highest price average and highest frequency
     marble = as.integer(str_detect(listing_description, "[Mm]arble")),
     master = as.integer(str_detect(listing_description, "[Mm]aster")),
-    views = as.integer(str_detect(listing_description, "[Vv]iews")),
-    custom = as.integer(str_detect(listing_description, "[Cc]ustom")),
-    floor = as.integer(str_detect(listing_description, "[Ff]loor")),
+    #views = as.integer(str_detect(listing_description, "[Vv]iews")),
+    custom = as.integer(str_detect(listing_description, c("[Cc]ustom", "[Cc]ustomize*"))),
+    floor = as.integer(str_detect(listing_description, "[Ff]loor*")),
     private = as.integer(str_detect(listing_description, "[Pp]rivate")),
-    windows = as.integer(str_detect(listing_description, "[Ww]indows")),
+    window = as.integer(str_detect(listing_description, "[Ww]indow*")),
     dining = as.integer(str_detect(listing_description, "[Dd]ining")),
-    offers = as.integer(str_detect(listing_description, "[Oo]ffers")),
-    light = as.integer(str_detect(listing_description, "[Ll]ight")),
+    offer = as.integer(str_detect(listing_description, "[Oo]ffer*")),
+    #light = as.integer(str_detect(listing_description, "[Ll]ight")),
+    #----------------------------------------------------------------
+    sqft = as.integer(str_detect(listing_description, c("[Ss]quare.[Ff]eet", "[Ss]quare.[Ff]oot"))),
+    hudson_river = as.integer(str_detect(listing_description, "[Hh]udson.[Rr]iver")),
     #----------------------------------------------------------------
     renovate = as.integer(str_detect(listing_description, "[Rr]enovat*")),
     closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
@@ -50,17 +53,17 @@ sale_listings_ss <<- sale_listings_imputed %>%
     storage = as.integer(str_detect(listing_description, "[Ss]torage")),
     closet_space = as.integer(str_detect(listing_description, "[Cc]loset.[Ss]pace")),
     roof_deck = as.integer(str_detect(listing_description, "[Rr]oof.[Dd]eck")),
-    park = as.integer(str_detect(listing_description, "[Pp]ark")),
-    balcony = as.integer(str_detect(listing_description, "[Bb]alcony")),
-    courtyard = as.integer(str_detect(listing_description, "[Cc]ourtyard")),
+    park = as.integer(str_detect(listing_description, "[Pp]ark[\\>|s]")),
+    balcony = as.integer(str_detect(listing_description, "[Bb]alcon*")),
+    courtyard = as.integer(str_detect(listing_description, "[Cc]ourtyard*")),
     view = as.integer(str_detect(listing_description, "[Vv]iew*")),
     window = as.integer(str_detect(listing_description, "[Ww]indow*")),
-    natural_light = as.integer(str_detect(listing_description, "[Nn]atural.[Ll]ight")),
+    natural_light = as.integer(str_detect(listing_description, "[Nn]atural.[Ll]ight*")),
     en_suite = as.integer(str_detect(listing_description, "[Ee]n.[Ss]uite")),
     pet_friendly = as.integer(str_detect(listing_description, "[Pp]et.[Ff]riendly")),
     tree_lined = as.integer(str_detect(listing_description, "[Tt]ree.[Ll]ined")),
     central_park = as.integer(str_detect(listing_description, "[Cc]entral.[Pp]ark")),
-    outdoor_space = as.integer(ifelse((park | balcony | courtyard | roof_deck | central_park | tree_lined) == 1, 1, 0))                              
+    # outdoor_space = as.integer(ifelse((park | balcony | courtyard | roof_deck | central_park | tree_lined) == 1, 1, 0))                              
   )
 
   library(tidytext)
@@ -79,7 +82,7 @@ sale_listings_ss <<- sale_listings_imputed %>%
   #for listings that have no emotion-associated words, use score = 0
   #mutate all binary variables to factors 
   sale_listings_ss <<- sale_listings_ss %>%
-    mutate(score = ifelse(is.na(score) == TRUE, 0, score)) %>%
+    mutate(score = replace_na(score, 0))%>%
     mutate_if(is.integer, as.factor)
 
 }
