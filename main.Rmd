@@ -52,6 +52,7 @@ original / log
 
 
 ## Important: things to keep consistent!
+
 - Put all 4 data files in a folder called `data`, because the pre-processing script refers to "data/..."
 - `sale-listings`: the variable name for sale-listings
 - `amenities`: the variable name for amenities, although we're not using it for now
@@ -65,4 +66,107 @@ original / log
 - `linear_reg_ml.Rmd`: linear regression models
 - `decision_tree_analysis.Rmd`: decision tree and random forest models
 
+## Grouping cities
+```{r city_group}
+median_price_city <- aggregate(sale_listings_imputed$price, by = list(sale_listings_imputed$major_city), median) %>%
+  arrange(desc(x))
+
+median_price_city$price_group <- cut(median_price_city$x, 10, include.lowest=TRUE,
+                                     labels = seq(10,1))
+
+city_group <- median_price_city%>%
+  select(-x) %>%
+  rename(major_city = Group.1,
+         city_group = price_group)
+
+sale_listings_imputed <- left_join(sale_listings_imputed, city_group, by ="major_city")
+```
+
+
+## Tables for final paper
+### Initial list of variables
+\begin{table}[]
+\centering
+\caption{Variables in the original data set provided by StreetEasy}
+\label{intial_var}
+\begin{tabular}{ll}
+Variable                 & Definition                                 \\
+id                       & Unique identifier for sale listing         \\
+property\_id             & Unique identifier for property             \\
+unittype                 & Property type                              \\
+subject                  & Listing subject                            \\
+listing\_description     & Listing description                        \\
+bedrooms                 & Number of bedrooms                         \\
+bathrooms                & Number of bathrooms                        \\
+anyrooms                 & Total number of rooms                      \\
+size\_sqft               & Square footage                             \\
+price                    & Listed price                               \\
+addr\_street             & Street                                     \\
+addr\_unit               & Unit                                       \\
+addr\_cross              & Cross streets                              \\
+addr\_hood               & Neighborhood                               \\
+addr\_city               & City                                       \\
+addr\_state              & State                                      \\
+addr\_zip                & Zip code                                   \\
+addr\_lon                & Longitude                                  \\
+addr\_lat                & Latitude                                   \\
+time\_to\_subway         & Time to subway                             \\
+half\_baths              & Number of half bath                        \\
+census\_tract            & Census tract                               \\
+census\_block            & Census block                               \\
+building\_count          & Number of building(s)                      \\
+floor\_count             & Number of floors in the building           \\
+residential\_unit\_count & Number of residential unit in the building \\
+total\_unit\_count       & Total number of units in the building      \\
+year\_built              & Building year built                        \\
+is\_historic             & Whether is a historic building             \\
+landmark\_name           & Building landmark name                     \\
+area\_name               & Area name                                 
+\end{tabular}
+\end{table}
+
+### Unit type
+```
+"NONE         = ' '
+CONDO        = 'D'
+COOP         = 'P'
+TOWNHOUSE    = 'T'
+LOFT         = 'L'
+CONDOP       = 'N'
+HOUSE        = 'H'
+MULTIFAMILY  = 'M'
+RENTAL       = 'R'
+UNKNOWN      = '?'
+LAND         = 'A'
+COMMERCIAL   = 'C'
+MOBILE_HOME  = 'E'
+BUILDING     = 'B'
+ESTATE       = 'S'
+APARTMENT    = 'F' # F is for Flat.
+UNCLASSIFIED = 'U'
+ANYHOUSE     = 'X'
+AUCTION      = 'Z'
+FRACTIONAL   = 'Y'"
+```
+
+
+
+### List of variables after pre-processing & var creation
+
+```{r descriptive stats for numerical var}
+descriptive_df <- sentiments_join %>%
+  select(price, bedrooms, bathrooms, size_sqft, floor_count, score)
+descriptive_num <- psych::describe(descriptive_df) %>%
+  select(n, mean, sd, median, min, max)
+psychTools::df2latex(descriptive_num)
+```
+
+```{r descriptive stats for cat var}
+descriptive_df_cat <- sentiments_join %>%
+  mutate(hw_floors = as.factor(hw_floors),
+         stainless_steel= as.factor(stainless_steel),
+         pet_friendly = as.factor(pet_friendly),
+         wd = as.factor(wd))
+furniture::table1(descriptive_df_cat, county, unittype, is_historic, city_group, hw_floors, stainless_steel, pet_friendly, wd, output = "latex2", na.rm = TRUE )
+```
 
