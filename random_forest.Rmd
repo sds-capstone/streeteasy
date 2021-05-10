@@ -231,6 +231,24 @@ RMSLE(test_caret_rf$price_hat, test$price)
 ```
 
 ```{r adding sentiment scores to model}
+train3 <- sentiments_join %>% sample_frac(.70)
+test3 <- sentiments_join %>% anti_join(train3)
+
+tree_sentiments = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, method = "anova", control = rpart.control(cp = 0.005))
+fancyRpartPlot(tree_sentiments)
+
+sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
+
+price_prediction_rf3 <- predict(sale_listings_rf3, test3, type = "response")
+varImpPlot(sale_listings_rf3)
+
+price_prediction_rf3 <- as.data.frame(price_prediction_rf3)
+price_prediction_rf3 <- as.integer(price_prediction_rf3$price_prediction_rf3)
+MAPE(y_pred = price_prediction_rf3, y_true = test3$price)
+RMSE(y_pred = price_prediction_rf3, y_true = test3$price)
+```
+
+```{r adding sentiment scores to model}
 #about 2000 listings does not have a score -- mainly bc their description does not contain any words associated with sentiments; will assign 0 
 numFolds <- trainControl(method = "cv", number = 5)
 set.seed(410)
