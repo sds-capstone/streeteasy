@@ -11,7 +11,6 @@ library(stringr)
 load_data <- function(){
   # Load the data in global environment
   sale_listings <<- read_csv("data/sale_listings.csv") 
-  amenities <<- read_csv("data/amenities.csv")
 }
 
 clean_data <- function(){

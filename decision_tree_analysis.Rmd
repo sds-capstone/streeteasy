@@ -30,181 +30,253 @@ source("text_processing.R")
 text_var()
 ```
 
-```{r}
-ml_setup(sale_listings_imputed) 
-
-#+1, -1 are supposed to optimize rmlse, but it seems like the result is the same at this point 
-train <- train %>%
-  mutate(log10price = log10(price + 1)) %>%
-  mutate(log10size = log10(size_sqft))
-
-test <- test %>%
-  mutate(log10size = log10(size_sqft))
-```
-
-This is old decision tree analysis:
-
-```{r narrowing location data}
-# we should group into city blocks or neighborhoods, maybe in pre-processing?
-# sale_listings_adj <- sale_listings %>%
-#   filter(addr_lat > 35,
-#          addr_lon < -70, 
-#          addr_lon > -76)
-```
-
-```{r simple decision tree with location and other variables}
-# old tree model
-# tree_all = rpart(price ~ bedrooms + bathrooms + size_sqft + time_to_subway + year_built, data = sale_listings_ss, subset = train, method = "class")
-# fancyRpartPlot(tree_all)
-```
-
-```{r calculating accuracy of decision tree}
-# price_prediction_tree <- predict(tree_all, sale_listings, type = 'class')
-# # comparing predictions to actual prices
-# table <- table(Price = sale_listings$price, Prediction = price_prediction_tree)
-# # determining model accuracy
-# accuracy_Test <- sum(diag(table)) / sum(table)
-# print(paste('Accuracy for test', accuracy_Test))
-```
-
-```{r developing a random forest}
-# # we can't include size_sqft + time_to_subway + year_built because there are missing values... can we impute/substitute values in???
-# sale_listings_rf <- randomForest(price ~ bedrooms + bathrooms + addr_lat + addr_lon, data = sale_listings_adj, ntree = 10)
-# price_prediction_rf <- predict(sale_listings_rf, sale_listings, type = "response")
-# t <- table(Price = sale_listings$price, Prediction = price_prediction_rf)
-# varImpPlot(sale_listings_rf)
-```
-
-```{r tried to mape ):}
-# price_prediction_rf <- as.data.frame(price_prediction_rf)
-# price_prediction_rf <- as.integer(price_prediction_rf$price_prediction_rf)
-# MAPE(y_pred = price_prediction_rf, y_true = sale_listings$price)
-# RMSE(y_pred = price_prediction_rf, y_true = sale_listings$price)
-```
-
-
-From here on out is the new decision tree analysis:
-
-```{r simple baseline decision tree model with location and other variables}
-# establishing test and training sets
-train <- sale_listings %>% 
-  sample_frac(.70)
-test <- sale_listings %>% 
-  anti_join(train)
-
-tree_prelim = rpart(price ~ bedrooms + bathrooms + size_sqft, data = train, method = "anova")
-fancyRpartPlot(tree_all)
-```
-
-```{r developing a random forest for baseline model}
-# we can't include size_sqft + time_to_subway + year_built because there are missing values... can we impute/substitute values in???
-sale_listings_rf <- randomForest(price ~ bedrooms + bathrooms, data = train, ntree = 10)
-
-price_prediction_rf <- predict(sale_listings_rf, test, type = "response")
-
-varImpPlot(sale_listings_rf)
-```
-
-```{r mape and rmse for baseline model}
-price_prediction_rf <- as.data.frame(price_prediction_rf)
-price_prediction_rf <- as.integer(price_prediction_rf$price_prediction_rf)
-MAPE(y_pred = price_prediction_rf, y_true = test$price)
-RMSE(y_pred = price_prediction_rf, y_true = test$price)
-```
-high mape ): yikes!
-
 ```{r adding new variables to improve baseline model}
 set.seed(410)
-train2 <- sale_listings_ss %>% sample_frac(.70)
-test2 <- sale_listings_ss %>% anti_join(train2)
+train <- sale_listings_ss %>% sample_frac(.70)
+test <- sale_listings_ss %>% anti_join(train)
 
-
-tree_all_ss = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group, data = train2, method = "anova", control = rpart.control(cp = 0.005))
-fancyRpartPlot(tree_all_ss)
+numFolds <- trainControl(method = "cv", number = 5)
 
 set.seed(410)
-sale_listings_rf2 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + city_group + stainless_steel + hw_floors + wd + pet_friendly, data = train2, ntree = 10)
+caret_rf_1 <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft , 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
 
-#+ is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group
+test_caret_rf_1 <- test %>%
+  mutate(price_hat_1 = predict(caret_rf_1, test))
 
-test_rf2 <- test2 %>%
-  mutate(price_hat = predict(sale_listings_rf2, test2))
+MAPE(y_pred = test_caret_rf_1$price_hat_1, y_true = test$price)
+RMSE(test_caret_rf_1$price_hat_1, test$price)
+RMSLE(test_caret_rf_1$price_hat_1, test$price)
 
-varImpPlot(sale_listings_rf2)
 
-MAPE(y_pred = test_rf2$price_hat, y_true = test2$price)
-RMSE(test_rf2$price_hat, test2$price)
+set.seed(410)
+caret_rf_2 <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft +
+                          unittype , 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
 
+test_caret_rf_2 <- test %>%
+  mutate(price_hat_2 = predict(caret_rf_2, test))
+
+MAPE(y_pred = test_caret_rf_2$price_hat_2, y_true = test$price)
+RMSE(test_caret_rf_2$price_hat_2, test$price)
+RMSLE(test_caret_rf_2$price_hat_2, test$price)
+
+
+set.seed(410)
+caret_rf_3 <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft +
+                          unittype +
+                            county, 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+
+test_caret_rf_3 <- test %>%
+  mutate(price_hat_3 = predict(caret_rf_3, test))
+
+MAPE(y_pred = test_caret_rf_3$price_hat_3, y_true = test$price)
+RMSE(test_caret_rf_3$price_hat_3, test$price)
+RMSLE(test_caret_rf_3$price_hat_3, test$price)
+
+
+set.seed(410)
+caret_rf_4 <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft +
+                          unittype +
+                            county +
+                            is_historic, 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+
+test_caret_rf_4 <- test %>%
+  mutate(price_hat_4 = predict(caret_rf_4, test))
+
+MAPE(y_pred = test_caret_rf_4$price_hat_4, y_true = test$price)
+RMSE(test_caret_rf_4$price_hat_4, test$price)
+RMSLE(test_caret_rf_4$price_hat_4, test$price)
+
+set.seed(410)
+caret_rf_5 <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft +
+                          unittype +
+                            county +
+                            is_historic +
+                            floor_count, 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+
+test_caret_rf_5 <- test %>%
+  mutate(price_hat_5 = predict(caret_rf_5, test))
+
+MAPE(y_pred = test_caret_rf_5$price_hat_5, y_true = test$price)
+RMSE(test_caret_rf_5$price_hat_5, test$price)
+RMSLE(test_caret_rf_5$price_hat_5, test$price)
+
+set.seed(410)
+caret_rf_6 <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft +
+                           unittype +
+                            county +
+                            is_historic +
+                            floor_count +
+                            city_group, 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+
+test_caret_rf_6 <- test %>%
+  mutate(price_hat_6 = predict(caret_rf_6, test))
+
+MAPE(y_pred = test_caret_rf_6$price_hat_6, y_true = test$price)
+RMSE(test_caret_rf_6$price_hat_6, test$price)
+RMSLE(test_caret_rf_6$price_hat_6, test$price)
+
+
+set.seed(410)
+caret_rf <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft + 
+                           unittype + 
+                           county + 
+                           is_historic + 
+                           floor_count + 
+                           city_group + 
+                           stainless_steel + hw_floors + wd + pet_friendly, 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
+
+test_caret_rf <- test %>%
+  mutate(price_hat = predict(caret_rf, test))
+
+MAPE(y_pred = test_caret_rf$price_hat, y_true = test$price)
+RMSE(test_caret_rf$price_hat, test$price)
+RMSLE(test_caret_rf$price_hat, test$price)
 
 # bed
 # bath
 # size_sqft
-# MAPE 0.6788141
-# RMSE 686466.6
+# MAPE 0.6001674
+# RMSE 662274.4
+# RMSLE 0.5694857
 
 # unittype
-# MAPE 0.5631888
-# RMSE 596811.7
+# MAPE 0.515053
+# RMSE 585639.2
+# RMSLE 0.5112604
 
 # county 
-# MAPE 0.4291711
-# RMSE 506354.3
+# MAPE 0.3378906
+# RMSE 456559.4
+# RMSLE 0.3792182
 
 # is_historic
-# MAPE 0.3490612
-# RMSE 454462.8
+# MAPE 0.3289417
+# RMSE 444032.5
+# RMSLE 0.3719362
 
 # floor_count
-# MAPE 0.3242541
-# RMSE 426788.2
+# MAPE  0.2972872
+# RMSE 410053.5
+# RMSLE 0.3484736
 
 # city_group 
-# MAPE 0.3153056
-# RMSE 427624.5
+# MAPE 0.2705793
+# RMSE 400027.5
+# RMSLE 0.3262318
 
 # stainless_steel 
 # hw_floors 
 # wd 
 # pet_friendly
-# MAPE 0.2860886
-# RMSE 408977.7
+# MAPE 0.2656724
+# RMSE 396093.3
+# RMSLE 0.3228432
 
 ```
 
 ```{r adding sentiment scores to model}
 #about 2000 listings does not have a score -- mainly bc their description does not contain any words associated with sentiments; will assign 0 
-  
+numFolds <- trainControl(method = "cv", number = 5)
 set.seed(410)
-train3 <- sale_listings_ss %>% sample_frac(.70)
-test3 <- sale_listings_ss %>% anti_join(train3)
+caret_rf_score <- caret::train(price ~ bedrooms + 
+                           bathrooms + 
+                           size_sqft + 
+                           unittype + 
+                           county + 
+                           is_historic + 
+                           floor_count + 
+                           city_group + 
+                           stainless_steel + hw_floors + wd + pet_friendly +
+                             score, 
+                          data = train, 
+                          method = "rf",
+                          ntree = 100, 
+                          trControl = numFolds,
+                          metric = "RMSE",
+                          na.action = na.omit)
 
-tree_sentiments = rpart(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + stainless_steel + hw_floors + wd + pet_friendly + city_group + score, data = train3, method = "anova", control = rpart.control(cp = 0.005))
 
-fancyRpartPlot(tree_sentiments)
+test_rf_score <- test %>%
+  mutate(price_hat_score = predict(caret_rf_score, test))
 
-set.seed(410)
-sale_listings_rf3 <- randomForest(price ~ bedrooms + bathrooms + size_sqft + unittype + county + is_historic + floor_count + city_group + stainless_steel + hw_floors + wd + pet_friendly + score, data = train3, ntree = 10, na.action = na.omit) # Elaine & Emma think NAs are causing error
-
-varImpPlot(sale_listings_rf3) 
-
-test_rf3 <- test3 %>%
-  mutate(price_hat = predict(sale_listings_rf3, test3))
-
-MAPE(y_pred = test_rf3$price_hat, y_true = test3$price)
-RMSE(test_rf3$price_hat, test3$price)
+MAPE(y_pred = test_rf_score$price_hat_score, y_true = test$price)
+RMSE(test_rf_score$price_hat_score, test$price)
+RMSLE(test_rf_score$price_hat_score, test$price)
 
 # sentiment score
-# MAPE  0.2816914
-# RMSE 405217.2
+# MAPE 0.2603957
+# RMSE 390974
+# RMSLE  0.3181844
 #I tried logprice and logsize but the RMSE for the same model went worse; probably we just go with raw price 
+varimp_score <- varImp(caret_rf_score)$importance %>%
+  arrange(desc(Overall))
+varimp_score <- as_tibble(varimp_score, rownames = "variable")
+
 
 ```
 
-#model tuning 
+
+# model tuning 
 ```{r}
 library(caret)
 #select all variables in the model for model tuning - let decision tree decide which one is important to keep
-#in total we have 42 variables; if taken all levels of categorical vars into account, we have 71 variables 
+#in total we have 39 variables; if taken all levels of categorical vars into account, we have 71 variables 
 sale_listings_tune <- sale_listings_ss %>%
   select(-id, -property_id, -listing_description, -size_sqft_na, -addr_street, -addr_unit, -zipcode, -year_built, -lat, -long, -major_city)
 head(sale_listings_tune)
@@ -218,7 +290,7 @@ testt <- sale_listings_tune %>% anti_join(traint)
 #this take forever to run - the best model is mtry = 26 
 
 numFolds <- trainControl(method = "cv", number = 5)
-mtry <- 12:30
+mtry <- 20:35
 tunegrid <- expand.grid(.mtry = mtry)
 set.seed(410)
 best_rf <- caret::train(price ~ ., 
@@ -233,14 +305,15 @@ best_rf <- caret::train(price ~ .,
 
 #extract the best mtry from the best_fr model 
 best_mtry <- best_rf$bestTune$mtry 
+varImp(best_rf)
 
-best_mtry <- 26
+best_mtry <- 32
 bestmtry <- expand.grid(.mtry = best_mtry)
 
-
 set.seed(410)
-#run the following model for mtry = 26
-mtry_26 <- caret::train(price ~ ., 
+#run the following model for mtry = 32
+#RMSE for train: 376945.7
+mtry_32 <- caret::train(price ~ ., 
                           data = traint, 
                           method = "rf",
                           tuneGrid = bestmtry,
@@ -249,40 +322,85 @@ mtry_26 <- caret::train(price ~ .,
                           metric = "RMSE",
                           na.action = na.omit)
 
-varimp_20 <- varImp(mtry_26)
-print(varimp_20)
+varimp_20 <- varImp(mtry_32)
+varimp_all <- varImp(mtry_32)$importance %>%
+  arrange(desc(Overall))
+varimp_all <- as_tibble(varimp_all, rownames = "variable")
 
-test_rf26 <- testt %>%
-  mutate(price_hat = predict(mtry_26, testt))
 
-MAPE(y_pred = test_rf26$price_hat, y_true = testt$price)
-RMSE(test_rf26$price_hat, testt$price)
-#caret::train mtry = 26, ntree = 100, all vars
-#mape 0.2561298
-#rmse 383185.2
+test_rf32 <- testt %>%
+  mutate(price_hat = predict(mtry_32, testt))
 
-#create default mtry 
-set.seed(410)
-#run the following model for mtry = default
-mtry_default <- caret::train(price ~ ., 
-                          data = traint, 
-                          method = "rf",
-                         # tuneGrid = bestmtry,
-                          ntree = 100, 
-                          trControl = numFolds,
-                          metric = "RMSE",
-                          na.action = na.omit)
-test_rf <- testt %>%
-  mutate(price_hat = predict(mtry_default, testt))
-
-MAPE(y_pred = test_rf$price_hat, y_true = testt$price)
-RMSE(test_rf$price_hat, testt$price)
-#MAPE 0.2486943
-#RMSE 383379.9
-write.csv(test_rf, "test_mtry_default.csv")
-varImp(mtry_default)
+MAPE(y_pred = test_rf32$price_hat, y_true = testt$price)
+RMSE(test_rf32$price_hat, testt$price)
+RMSLE(test_rf32$price_hat, testt$price)
+#mape 0.2484644
+#rmse 381930.2
+#rmlse 0.3063396
+```
+# Mtry result tab
+```{r}
+result_tab <- best_rf[["results"]]
+psychTools::df2latex(result_tab, digits = 3, short.names = FALSE, )
 ```
 
+# Comparison of models 
+```{r}
+rf_metrics <- data.frame(Variables = c("bed, bath, 
+                                       size_sqft",
+                             "unittype",
+                             "county",
+                             "is_historic",
+                             "floor_count",
+                             "city_group",
+                             "stainless_steel, 
+                             hw_floors, wd, pet",
+                             "sentiment_score",
+                             "all variables"),
+                    MAPE = c(0.600,
+                             0.515,
+                             0.338,
+                             0.329,
+                             0.297,
+                             0.270,
+                             0.266,
+                             0.260,
+                             0.248
+                             ),
+                    RMSE = c(662274.4,
+                             585639.2,
+                             456559.4,
+                             444032.5,
+                             410053.5,
+                             400027.5,
+                             396093.3,
+                             390974,
+                             381930.2
+                             ),
+                    RMSLE = c(0.569,
+                              0.511,
+                              0.379,
+                              0.372,
+                              0.348,
+                              0.326,
+                              0.322,
+                              0.318,
+                              0.306
+                    ))
+
+
+rf_plot <- rf_metrics %>%
+ggplot(aes(y = MAPE, x = fct_reorder(Variables, MAPE, .desc = TRUE))) + 
+  geom_line(group=1, color="#000066") +
+  scale_y_continuous(labels = scales::percent, limits = c(0.2,0.7)) +
+  labs(x="Variables", title = "MAPE across Random Forest Models") + 
+  geom_text(aes(label=MAPE), vjust=-1, size=3, color="#000066") +
+ theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+rf_plot
+library(plotly)
+ggplotly(rf_plot)
+```
 
 
 https://rstudio-pubs-static.s3.amazonaws.com/71575_4068e2e6dc3d46a785ad7886426c37db.html
