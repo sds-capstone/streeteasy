@@ -170,3 +170,39 @@ descriptive_df_cat <- sentiments_join %>%
 furniture::table1(descriptive_df_cat, county, unittype, is_historic, city_group, hw_floors, stainless_steel, pet_friendly, wd, output = "latex2", na.rm = TRUE )
 ```
 
+## Visualization of price & sentiment score by county 
+```{r}
+library(ggridges)
+mean_price <- sale_listings_ss %>%
+  group_by(county) %>%
+  summarise(mean_price = mean(price))
+
+#Monmouth county only has one entry 
+#essex county in NJ only has one entry 
+ggplot(sale_listings_ss, aes(x = score, y = fct_reorder(county, score, .fun = mean))) +
+  geom_density_ridges(aes(fill = county),quantile_lines=TRUE,
+                      quantile_fun=function(x,...)mean(x)) +
+  scale_fill_viridis_d() + 
+  theme_minimal() + 
+  labs(x = "Sentiment Score", 
+       y="County", 
+       title = "Density Plot of Sentiment Scores by County",
+       subtitle = "arranged by mean") +
+  theme(legend.position = "none") 
+
+ggplot(sale_listings_ss, aes(x = price,
+       y = fct_reorder(county, price, .fun = mean))) +
+  geom_density_ridges(aes(fill = county),quantile_lines=TRUE,
+                      quantile_fun=function(x,...)mean(x)) +
+  scale_x_continuous(labels = scales::comma) +
+  scale_fill_viridis_d() + 
+  theme_minimal() +
+  labs(x = "Price", 
+       y="County", 
+       title = "Density Plot of Price by County",
+       subtitle = "arranged by mean") +
+  theme(legend.position = "none") 
+```
+
+
+
