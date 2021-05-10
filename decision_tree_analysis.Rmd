@@ -264,10 +264,11 @@ RMSLE(test_rf_score$price_hat_score, test$price)
 # RMSE 390974
 # RMSLE  0.3181844
 #I tried logprice and logsize but the RMSE for the same model went worse; probably we just go with raw price 
+rf_score_imp <- varImp(caret_rf_score)
 varimp_score <- varImp(caret_rf_score)$importance %>%
   arrange(desc(Overall))
 varimp_score <- as_tibble(varimp_score, rownames = "variable")
-
+plot(rf_score_imp)
 
 ```
 
@@ -322,11 +323,8 @@ mtry_32 <- caret::train(price ~ .,
                           metric = "RMSE",
                           na.action = na.omit)
 
-varimp_20 <- varImp(mtry_32)
-varimp_all <- varImp(mtry_32)$importance %>%
-  arrange(desc(Overall))
-varimp_all <- as_tibble(varimp_all, rownames = "variable")
-
+varimp_m32 <- varImp(mtry_32)
+plot(varimp_m32, top = 50)
 
 test_rf32 <- testt %>%
   mutate(price_hat = predict(mtry_32, testt))
@@ -337,6 +335,7 @@ RMSLE(test_rf32$price_hat, testt$price)
 #mape 0.2484644
 #rmse 381930.2
 #rmlse 0.3063396
+colnames(sale_listings_tune)
 ```
 # Mtry result tab
 ```{r}
@@ -387,9 +386,10 @@ rf_metrics <- data.frame(Variables = c("bed, bath,
                               0.318,
                               0.306
                     ))
+```
 
-
-rf_plot <- rf_metrics %>%
+```{r metrics plot}
+rf_mape_plot <- rf_metrics %>%
 ggplot(aes(y = MAPE, x = fct_reorder(Variables, MAPE, .desc = TRUE))) + 
   geom_line(group=1, color="#000066") +
   scale_y_continuous(labels = scales::percent, limits = c(0.2,0.7)) +
@@ -397,9 +397,29 @@ ggplot(aes(y = MAPE, x = fct_reorder(Variables, MAPE, .desc = TRUE))) +
   geom_text(aes(label=MAPE), vjust=-1, size=3, color="#000066") +
  theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-rf_plot
-library(plotly)
-ggplotly(rf_plot)
+
+rf_rmse_plot <- rf_metrics %>%
+ggplot(aes(y = RMSE, x = fct_reorder(Variables, RMSE, .desc = TRUE))) + 
+  geom_line(group=1, color="#000066") +
+  scale_y_continuous(labels = scales::comma, limits = c(350000, 700000)) +
+  labs(x="Variables", title = "RMSE across Random Forest Models") + 
+  geom_text(aes(label=RMSE), vjust=-1, size=3, color="#000066") +
+ theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+rf_rmsle_plot <- rf_metrics %>%
+ggplot(aes(y = RMSLE, x = fct_reorder(Variables, RMSLE, .desc = TRUE))) + 
+  geom_line(group=1, color="#000066") +
+  scale_y_continuous(limits = c(0.3, 0.6)) +
+  labs(x="Variables", title = "RMSLE across Random Forest Models") + 
+  geom_text(aes(label=RMSLE), vjust=-1, size=3, color="#000066") +
+ theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+rf_mape_plot
+  rf_rmse_plot
+  rf_rmsle_plot
+
 ```
 
 
